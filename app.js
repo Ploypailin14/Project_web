@@ -16,7 +16,7 @@ app.post('/password/:raw', function(req, res) {
 
 
 // login
-app.post('/login', function(req, res) {
+app.post('/admin/login', function(req, res) {
     // const username = req.body.username;
     // const password = req.body.password;
     const {username, password} = req.body;  
