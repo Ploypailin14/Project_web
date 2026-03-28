@@ -2,56 +2,56 @@ const express = require('express');
 const app = express();
 const con = require('./db')
 const path = require('path');
-const argon2 = require('argon2');
+const argon2 = require('@node-rs/argon2');
 
 app.use(express.json());
 
 // hashing password
-app.post('/password/:raw', function(req, res) {
-    const raw = req.params.raw;
-    console.log(raw);
-    const hash = argon2.hash(raw);
-    res.status(200).send(hash);
+app.get('/password/:raw', (req, res) => {
+const raw = req.params.raw;
+const hash = argon2.hashSync(raw);
+// console.log(hash.length);
+// 97 characters
+res.send(hash);
 });
 
-
 // login
-app.post('/admin/login', function(req, res) {
-    // const username = req.body.username;
-    // const password = req.body.password;
-    const {username, password} = req.body;  
+app.post('/admin/login', async function(req, res) {
+    const { username, password } = req.body;
 
-    // connect to DB and verify username and password
-    const sql = "SELECT id,role FROM user WHERE username=? AND password=?";
-    con.query(sql, [username, password], function(err, results) {
-        if(err) {
+    // 1. เปลี่ยนชื่อคอลัมน์ใน SELECT เป็น password (ตามที่คุณแจ้งมา)
+    const sql = "SELECT username, password FROM admin WHERE username = ?";
+    
+    con.query(sql, [username], async function(err, results) {
+        if (err) {
+            console.error(err);
             return res.status(500).send('Server error');
         }
-        if(results.length != 1) {
+
+        // 2. ตรวจสอบว่ามี username นี้ในระบบไหม
+        if (results.length !== 1) {
             return res.status(401).send('Wrong username');
         }
-        //verify the password
-        const same = argon2.verify(results[0].password, password);
-        if(!same) {
-            return res.status(401).send('Wrong password');
+
+        try {
+            // 3. ใช้ argon2.verify เทียบ password จาก body กับ password (hash) จาก DB
+            // ต้องใช้ await เพราะเป็น Async
+            const isMatch = await argon2.verify(results[0].password, password);
+
+            if (!isMatch) {
+                return res.status(401).send('Wrong password');
+            }
+
+            // 4. Login สำเร็จ
+            res.status(200).json({
+                message: 'Login OK',
+                username: results[0].username
+            });
+
+        } catch (error) {
+            console.error("Verification error:", error);
+            res.status(500).send('Internal verification error');
         }
-        //res.status(200).send('Login OK');
-        if(results[0].role == 'admin') {
-            return res.status(200).send('Login OK, admin');
-        }
-        res.status(200).send('Login OK');
-        
-        /// if(err) {
-        //     res.status(500).send('Server error');
-        // } else {
-        //     if(results.length != 1) {
-        //         // 1. no match
-        //         res.status(401).send('Login failed');
-        //     } else {
-        //         // 2. get a row
-        //         res.status(200).send('Login success');
-        //     }
-        // }
     });
 });
 //******************** Admin ***********************
