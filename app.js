@@ -250,7 +250,148 @@ app.get('/customer/history/:customerId', (req, res) => {
 
 
 // #####################################################################################
-// (ADMIN)
+// (ADMIN) - จัดการหลังบ้าน
 // #####################################################################################
+
+// 1. สร้าง Admin ใหม่ (ยิงเพื่อเทสเอาข้อมูลเข้า MySQL)
+app.post('/admin/register', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).send('Please provide username and password');
+    }
+
+    try {
+        const hashPassword = await argon2.hash(password);
+        const sql = "INSERT INTO admin (username, password, role) VALUES (?, ?, 'admin')";
+        
+        con.query(sql, [username, hashPassword], (err, result) => {
+            if (err) {
+                console.error("Insert DB Error:", err);
+                return res.status(500).json({ error: "Failed to create admin. Username might already exist." });
+            }
+            res.status(201).json({ 
+                message: 'Admin created successfully! เช็คใน MySQL ได้เลย', 
+                username: username 
+            });
+        });
+    } catch (error) {
+        console.error("Hashing error:", error);
+        res.status(500).send('Error encrypting password');
+    }
+});
+
+// 2. ระบบ Login ของ Admin
+app.post('/admin/login', (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).send('Please provide username and password');
+    }
+
+    const sql = "SELECT * FROM admin WHERE username = ?";
+    
+    con.query(sql, [username], async (err, results) => {
+        if (err) return res.status(500).send('Database error');
+        
+        if (results.length === 0) {
+            return res.status(401).send('Wrong username');
+        }
+
+        try {
+            const isMatch = await argon2.verify(results[0].password, password);
+
+            if (!isMatch) {
+                return res.status(401).send('Wrong password');
+            }
+
+            const mockToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_token_for_test";
+
+            res.status(200).json({
+                token: mockToken
+            });
+
+        } catch (error) {
+            console.error("Verification error:", error);
+            res.status(500).send('Internal verification error');
+        }
+    });
+});
+
+// =========================================================
+// 👇 เติมโค้ดส่วนที่ขาดไปตรงนี้แล้วครับ (อิงตามตาราง API Spec) 👇
+// =========================================================
+
+// 3. ดูรายชื่อกุ๊กทั้งหมด
+app.get('/admin/cooks', (req, res) => {
+    con.query("SELECT cook_id, status FROM cook", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+// 4. เปิด/ปิดการใช้งานกุ๊ก (Enable/Disable)
+app.put('/admin/cook/:id', (req, res) => {
+    const cookId = req.params.id;
+    const { status } = req.body; 
+
+    const sql = "UPDATE cook SET status = ? WHERE cook_id = ?";
+    con.query(sql, [status, cookId], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "updated" }); 
+    });
+});
+
+// 5. เพิ่มเมนูอาหารใหม่
+app.post('/admin/menu', (req, res) => {
+    const { name, price } = req.body;
+    
+    const sql = "INSERT INTO menu_item (name, price, status) VALUES (?, ?, 'available')";
+    con.query(sql, [name, price], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "added" });
+    });
+});
+
+// 6. แก้ไขหรือระงับเมนูอาหาร
+app.put('/admin/menu/:id', (req, res) => {
+    const menuId = req.params.id;
+    const { name, status } = req.body; 
+
+    const sql = "UPDATE menu_item SET name = ?, status = ? WHERE menu_id = ?";
+    con.query(sql, [name, status, menuId], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "updated" });
+    });
+});
+
+// 7. ดูรายการชำระเงินทั้งหมด (เส้นนี้แหละที่นายเทสเมื่อกี้!)
+app.get('/admin/payments', (req, res) => {
+    con.query("SELECT payment_id, amount FROM payment", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+// 8. ดูสถิติรวม Dashboard
+app.get('/admin/dashboard', (req, res) => {
+    const sql = `
+        SELECT 
+            (SELECT SUM(amount) FROM payment) as total_revenue,
+            (SELECT AVG(rating) FROM review) as avg_rating
+    `;
+    
+    con.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        const revenue = results[0].total_revenue || 0;
+        const rating = results[0].avg_rating || 0;
+
+        res.status(200).json({ 
+            total_revenue: parseInt(revenue), 
+            avg_rating: parseFloat(rating).toFixed(1) 
+        });
+    });
+});
 
 
