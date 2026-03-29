@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>History</title>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="bg-white p-6 shadow-sm sticky top-0 flex justify-between items-center">
+        <h1 class="text-xl font-bold">Order History</h1>
+        <button onclick="location.href='/status'" class="text-orange-500 font-bold">Back</button>
+    </div>
+
+    <div id="historyList" class="p-4 space-y-4"></div>
+
+    <script>
+        async function loadHistory() {
+            const sessionId = localStorage.getItem('sessionId');
+            const res = await fetch(`/customer/history/${sessionId}`);
+            const data = await res.json();
+            const container = document.getElementById('historyList');
+
+            container.innerHTML = data.map(order => `
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold text-lg">Order #${order.order_id}</span>
+                        <span class="text-gray-400 text-sm">${new Date(order.created_at).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Total: ${order.total_price}฿</span>
+                        <button onclick="location.href='/review?id=${order.order_id}'" 
+                                class="bg-blue-500 text-white px-4 py-1 rounded-lg text-sm">Review</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        loadHistory();
+    </script>
+</body>
+</html>

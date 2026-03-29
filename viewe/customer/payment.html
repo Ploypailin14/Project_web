@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Payment</title>
+</head>
+<body class="bg-gray-50 flex flex-col items-center p-6">
+    <h1 class="text-2xl font-bold my-6">หน้าชำระเงิน</h1>
+    <div class="bg-white w-full max-w-sm p-8 rounded-3xl shadow-lg text-center">
+        <p class="text-gray-500">ยอดเงินรวมทั้งสิ้น</p>
+        <h2 id="finalAmount" class="text-4xl font-black text-orange-600 my-4">0฿</h2>
+        <div class="space-y-3 mt-8 text-left">
+            <p class="font-bold">เลือกวิธีชำระ:</p>
+            <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:bg-orange-50">
+                <input type="radio" name="method" value="Cash" checked class="mr-3"> เงินสดที่เคาน์เตอร์
+            </label>
+            <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:bg-orange-50">
+                <input type="radio" name="method" value="PromptPay" class="mr-3"> พร้อมเพย์ / โอนเงิน
+            </label>
+        </div>
+        <button onclick="pay()" class="w-full bg-green-500 text-white py-4 rounded-xl mt-8 font-bold text-lg shadow-md">ยืนยันการแจ้งชำระ</button>
+    </div>
+    <script>
+        const amount = new URLSearchParams(window.location.search).get('total');
+        document.getElementById('finalAmount').innerText = amount + '฿';
+        async function pay() {
+            const method = document.querySelector('input[name="method"]:checked').value;
+            const res = await fetch('/customer/payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: localStorage.getItem('sessionId'), amount: amount, method: method })
+            });
+            if(res.ok) {
+                Swal.fire('เรียบร้อย!', 'กรุณารอพนักงานมาตรวจสอบที่โต๊ะ', 'success').then(() => {
+                    localStorage.clear();
+                    location.href = '/';
+                });
+            }
+        }
+    </script>
+</body>
+</html>

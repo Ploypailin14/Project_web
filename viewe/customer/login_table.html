@@ -2,35 +2,80 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>Login Table</title>
+    <style>
+        /* CSS เพิ่มเติมสำหรับตั้งค่าพื้นหลัง */
+        body {
+            /* สำคัญ: เปลี่ยน 'your-uploaded-image.jpg' เป็นชื่อไฟล์รูปภาพจริงของคุณ 
+              และตรวจสอบให้แน่ใจว่า Express เสิร์ฟไฟล์นี้ได้ (เช่น อยู่ในโฟลเดอร์ public)
+            */
+            background-image: url('/public/image/BG.png');
+            background-size: cover; /* ปรับรูปให้คลุมเต็มหน้าจอ */
+            background-position: center; /* จัดโพซิชั่นกึ่งกลาง */
+            background-repeat: no-repeat; /* ไม่ซ้ำรูป */
+            background-attachment: fixed; /* พื้นหลังอยู่กับที่เมื่อสกロール */
+        }
+    </style>
 </head>
-<body class="bg-[#d48806] min-h-screen flex flex-col items-center justify-center p-4">
-    <h1 class="text-white text-5xl font-bold mb-12">Restaurant App</h1>
-    <div class="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl text-center">
-        <p class="text-gray-400 text-lg mb-6">Enter Table Number</p>
-        <input type="number" id="tableId" class="w-full pl-4 pr-4 py-3 border-2 border-orange-400 rounded-xl mb-6 text-xl text-center" placeholder="Ex. 1">
-        <button onclick="startOrder()" class="w-full bg-[#f39c12] hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95">
+<body class="min-h-screen flex flex-col items-center justify-center p-6 relative">
+    
+    <div class="absolute inset-0 bg-[#f39c12]/50 z-0"></div>
+
+    <h1 class="text-white text-6xl font-black mb-16 drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)] z-10 tracking-tight">
+        Restaurant App
+    </h1>
+    
+    <div class="bg-white w-full max-w-sm rounded-[3rem] p-12 shadow-[0_10px_40px_rgba(0,0,0,0.3)] text-center z-10 border border-gray-100">
+        <p class="text-gray-400 text-2xl mb-10 font-medium">Enter Table Number</p>
+        
+        <div class="relative mb-10">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-6">
+                <svg class="w-8 h-8 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                </svg>
+            </span>
+            <input type="number" id="tableId" 
+                class="w-full pl-20 pr-6 py-5 border-2 border-orange-300 rounded-2xl text-3xl text-center font-bold focus:outline-none focus:ring-4 focus:ring-orange-200 transition-all placeholder:text-gray-300 placeholder:font-normal" 
+                placeholder="Ex. 1">
+        </div>
+            
+        <button onclick="startOrder()" 
+            class="w-full bg-[#f39c12] hover:bg-orange-600 text-white font-black py-6 rounded-2xl transition-all shadow-[0_8px_20px_rgba(243,156,18,0.4)] active:scale-95 text-2xl tracking-tight">
             Start Order
         </button>
     </div>
 
     <script>
+        // ฟังก์ชันเริ่มสั่งอาหาร (เหมือนเดิม)
         async function startOrder() {
             const tableId = document.getElementById('tableId').value;
-            if(!tableId) return Swal.fire('กรุณากรอกเลขโต๊ะ', '', 'warning');
-
-            const res = await fetch('/customer/session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ table_id: tableId })
+            if(!tableId) return Swal.fire({ 
+                icon: 'warning', 
+                title: 'กรุณากรอกเลขโต๊ะ', 
+                confirmButtonColor: '#f39c12',
+                customClass: { popup: 'rounded-3xl' }
             });
-            const data = await res.json();
-            if(data.sessionId) {
-                localStorage.setItem('sessionId', data.sessionId);
-                localStorage.setItem('tableNumber', tableId);
-                window.location.href = '/menu';
+
+            try {
+                const res = await fetch('/customer/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ table_id: tableId })
+                });
+                const data = await res.json();
+                if(data.sessionId) {
+                    localStorage.setItem('sessionId', data.sessionId);
+                    localStorage.setItem('tableNumber', tableId);
+                    window.location.href = '/menu';
+                } else {
+                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง Session ได้', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire('ขออภัย', 'ไม่สามารถเชื่อมต่อเครื่องแม่ข่ายได้', 'error');
             }
         }
     </script>

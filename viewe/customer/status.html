@@ -5,52 +5,44 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <title>Order Status</title>
 </head>
-<body class="bg-gray-50 min-h-screen pb-20">
-    <div class="bg-white p-6 shadow-sm sticky top-0 text-center">
-        <h2 class="text-2xl font-bold mb-4">Your Orders</h2>
-        <div class="flex justify-center gap-4 text-xs font-medium">
-            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-yellow-400 rounded-full"></span> Pending</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-600 rounded-full"></span> Cooking</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-green-500 rounded-full"></span> Served</span>
+<body class="bg-gray-50 min-h-screen pb-24">
+    <div class="bg-white p-8 shadow-sm sticky top-0 text-center rounded-b-[3rem]">
+        <h2 class="text-3xl font-bold mb-6 text-gray-800">Your Orders</h2>
+        <div class="flex justify-center gap-6 text-sm font-semibold">
+            <span class="flex items-center gap-2"><span class="w-4 h-4 bg-yellow-400 rounded-full"></span> Pending</span>
+            <span class="flex items-center gap-2"><span class="w-4 h-4 bg-blue-500 rounded-full"></span> Cooking</span>
+            <span class="flex items-center gap-2"><span class="w-4 h-4 bg-green-500 rounded-full"></span> Served</span>
         </div>
     </div>
 
-    <div id="statusList" class="p-4 space-y-4 max-w-xl mx-auto">
+    <div id="statusList" class="p-6 space-y-5 max-w-xl mx-auto">
         </div>
-
-    <div class="fixed bottom-0 w-full bg-white p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] flex justify-around">
-        <button onclick="window.location.href='/menu'" class="text-gray-400 font-bold">Menu</button>
-        <button onclick="window.location.href='/status'" class="text-orange-500 font-bold">Status</button>
-    </div>
 
     <script>
         async function loadStatus() {
-            const sessionId = localStorage.getItem('sessionId');
-            const res = await fetch(`/customer/order-status/${sessionId}`);
+            const sid = localStorage.getItem('sessionId');
+            const res = await fetch(`/customer/order-status/${sid}`);
             const data = await res.json();
-            const list = document.getElementById('statusList');
+            
+            const colors = { 'pending': 'border-yellow-400', 'cooking': 'border-blue-500', 'served': 'border-green-500' };
 
-            const statusColors = {
-                'pending': 'border-yellow-400',
-                'cooking': 'border-blue-600',
-                'served': 'border-green-500'
-            };
-
-            list.innerHTML = data.map(item => `
-                <div class="bg-white rounded-xl p-5 shadow-lg border-l-8 ${statusColors[item.order_status] || 'border-gray-300'}">
-                    <div class="flex justify-between items-start">
+            document.getElementById('statusList').innerHTML = data.map(item => `
+                <div class="bg-white rounded-[1.5rem] p-6 shadow-lg border-l-[10px] ${colors[item.order_status] || 'border-gray-200'} transition-all">
+                    <div class="flex justify-between items-center">
                         <div>
-                            <h4 class="text-lg font-bold">${item.name}</h4>
-                            <p class="text-sm text-gray-500 italic">${item.detail || '-'}</p>
+                            <h4 class="text-xl font-bold text-gray-800">${item.name}</h4>
+                            <p class="text-gray-400 italic text-sm mt-1">Note: ${item.detail || '-'}</p>
                         </div>
-                        <span class="font-bold text-orange-500">${item.order_status.toUpperCase()}</span>
+                        <div class="text-right">
+                            <span class="block text-xs font-black text-gray-300 uppercase tracking-widest">${item.order_status}</span>
+                            <span class="text-2xl font-bold text-orange-500">x${item.quantity}</span>
+                        </div>
                     </div>
                 </div>
             `).join('');
         }
-        
         loadStatus();
-        setInterval(loadStatus, 5000); // อัปเดตทุก 5 วินาที
+        setInterval(loadStatus, 5000);
     </script>
 </body>
 </html>

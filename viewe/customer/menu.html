@@ -4,24 +4,32 @@
     <meta charset="UTF-8">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <title>Menu</title>
+    <title>Menu List</title>
 </head>
-<body class="bg-gray-100 min-h-screen pb-20">
-    <div class="bg-[#d48806] p-4 sticky top-0 z-10 shadow-md flex justify-between items-center text-white">
-        <h2 class="font-bold">Menu List</h2>
-        <div class="font-bold">Table | <span id="displayTable">0</span></div>
+<body class="bg-gray-50 min-h-screen pb-24">
+    <div class="bg-[#d48806] p-5 sticky top-0 z-50 shadow-lg flex justify-between items-center text-white">
+        <h2 class="text-xl font-bold">Menu List</h2>
+        <div class="bg-white/20 px-4 py-1 rounded-full backdrop-blur-sm font-bold">
+            Table | <span id="displayTable">0</span>
+        </div>
     </div>
 
-    <div id="menuList" class="p-4 space-y-4 max-w-2xl mx-auto">
+    <div id="menuList" class="p-4 space-y-5 max-w-2xl mx-auto">
         </div>
 
-    <div class="fixed bottom-0 w-full bg-white p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] flex justify-around">
-        <button onclick="window.location.href='/menu'" class="text-orange-500 font-bold">Menu</button>
-        <button onclick="window.location.href='/status'" class="text-gray-400 font-bold">Status</button>
+    <div class="fixed bottom-0 w-full bg-white p-4 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] flex justify-around rounded-t-[2rem]">
+        <button onclick="location.href='/menu'" class="flex flex-col items-center text-orange-500 font-bold">
+            <span class="text-2xl">🍴</span><span class="text-xs">Menu</span>
+        </button>
+        <button onclick="location.href='/cart'" class="flex flex-col items-center text-gray-400 font-bold">
+            <span class="text-2xl">🛒</span><span class="text-xs">Cart</span>
+        </button>
+        <button onclick="location.href='/status'" class="flex flex-col items-center text-gray-400 font-bold">
+            <span class="text-2xl">📋</span><span class="text-xs">Status</span>
+        </button>
     </div>
 
     <script>
-        const sessionId = localStorage.getItem('sessionId');
         document.getElementById('displayTable').innerText = localStorage.getItem('tableNumber');
 
         async function loadMenu() {
@@ -29,50 +37,40 @@
             const items = await res.json();
             const list = document.getElementById('menuList');
             list.innerHTML = items.map(item => `
-                <div class="bg-white rounded-2xl p-4 flex shadow-sm border border-gray-100">
-                    <img src="https://via.placeholder.com/100" class="w-24 h-24 rounded-xl object-cover border-2 border-orange-400 p-1">
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-lg font-bold">${item.name}</h3>
-                        <p class="text-gray-500 text-sm">${item.description || ''}</p>
-                        <div class="flex justify-between items-end mt-2">
-                            <span class="text-xl font-bold">${item.price}฿</span>
-                            <button onclick="placeOrder(${item.menu_id})" class="bg-orange-500 text-white px-6 py-1 rounded-lg font-bold shadow-md active:scale-95">+ Add</button>
+                <div class="bg-white rounded-[2rem] p-4 flex shadow-md border border-gray-50 items-center">
+                    <img src="${item.image_url || 'https://via.placeholder.com/150'}" 
+                        class="w-28 h-28 rounded-[1.5rem] object-cover border-4 border-orange-50 shadow-inner">
+                    <div class="ml-5 flex-1">
+                        <h3 class="text-xl font-bold text-gray-800">${item.name}</h3>
+                        <p class="text-gray-400 text-sm line-clamp-1">${item.description || ''}</p>
+                        <div class="flex justify-between items-center mt-3">
+                            <span class="text-2xl font-black text-[#d48806]">${item.price}฿</span>
+                            <button onclick="addToCart(${item.menu_id}, '${item.name}', ${item.price})" 
+                                class="bg-[#f39c12] hover:bg-orange-600 text-white px-6 py-2 rounded-xl font-bold shadow-md active:scale-90 transition-all">
+                                + Add
+                            </button>
                         </div>
                     </div>
                 </div>
             `).join('');
         }
 
-        async function placeOrder(menuId) {
-            const { value: detail } = await Swal.fire({
-                title: 'รายละเอียดเพิ่มเติม',
+        function addToCart(id, name, price) {
+            Swal.fire({
+                title: name,
                 input: 'text',
-                inputPlaceholder: 'เช่น เผ็ดน้อย, ไม่ใส่ผัก...',
-                showCancelButton: true
-            });
-
-            if (detail !== undefined) {
-                const orderData = {
-                    session_id: sessionId,
-                    items: [{
-                        menu_id: menuId,
-                        quantity: 1,
-                        detail: detail,
-                        extra: 'Normal',
-                        extra_price: 0
-                    }]
-                };
-
-                const res = await fetch('/customer/order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(orderData)
-                });
-
-                if(res.ok) {
-                    Swal.fire('สั่งอาหารสำเร็จ!', '', 'success');
+                inputPlaceholder: 'รายละเอียดเพิ่มเติม (เช่น เผ็ดน้อย)',
+                showCancelButton: true,
+                confirmButtonColor: '#f39c12',
+                confirmButtonText: 'Add to Cart'
+            }).then(result => {
+                if(result.isConfirmed) {
+                    let cart = JSON.parse(localStorage.getItem('cart')) || [];
+                    cart.push({ menu_id: id, name: name, price: price, quantity: 1, detail: result.value || '-' });
+                    localStorage.setItem('cart', JSON.stringify(cart));
+                    Swal.fire({ icon: 'success', title: 'Added!', showConfirmButton: false, timer: 800 });
                 }
-            }
+            });
         }
         loadMenu();
     </script>
