@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Login Table</title>
+</head>
+<body class="bg-[#d48806] min-h-screen flex flex-col items-center justify-center p-4">
+    <h1 class="text-white text-5xl font-bold mb-12">Restaurant App</h1>
+    <div class="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl text-center">
+        <p class="text-gray-400 text-lg mb-6">Enter Table Number</p>
+        <input type="number" id="tableId" class="w-full pl-4 pr-4 py-3 border-2 border-orange-400 rounded-xl mb-6 text-xl text-center" placeholder="Ex. 1">
+        <button onclick="startOrder()" class="w-full bg-[#f39c12] hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95">
+            Start Order
+        </button>
+    </div>
+
+    <script>
+        async function startOrder() {
+            const tableId = document.getElementById('tableId').value;
+            if(!tableId) return Swal.fire('กรุณากรอกเลขโต๊ะ', '', 'warning');
+
+            const res = await fetch('/customer/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ table_id: tableId })
+            });
+            const data = await res.json();
+            if(data.sessionId) {
+                localStorage.setItem('sessionId', data.sessionId);
+                localStorage.setItem('tableNumber', tableId);
+                window.location.href = '/menu';
+            }
+        }
+    </script>
+</body>
+</html>

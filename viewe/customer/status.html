@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Order Status</title>
+</head>
+<body class="bg-gray-50 min-h-screen pb-20">
+    <div class="bg-white p-6 shadow-sm sticky top-0 text-center">
+        <h2 class="text-2xl font-bold mb-4">Your Orders</h2>
+        <div class="flex justify-center gap-4 text-xs font-medium">
+            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-yellow-400 rounded-full"></span> Pending</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-600 rounded-full"></span> Cooking</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-green-500 rounded-full"></span> Served</span>
+        </div>
+    </div>
+
+    <div id="statusList" class="p-4 space-y-4 max-w-xl mx-auto">
+        </div>
+
+    <div class="fixed bottom-0 w-full bg-white p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] flex justify-around">
+        <button onclick="window.location.href='/menu'" class="text-gray-400 font-bold">Menu</button>
+        <button onclick="window.location.href='/status'" class="text-orange-500 font-bold">Status</button>
+    </div>
+
+    <script>
+        async function loadStatus() {
+            const sessionId = localStorage.getItem('sessionId');
+            const res = await fetch(`/customer/order-status/${sessionId}`);
+            const data = await res.json();
+            const list = document.getElementById('statusList');
+
+            const statusColors = {
+                'pending': 'border-yellow-400',
+                'cooking': 'border-blue-600',
+                'served': 'border-green-500'
+            };
+
+            list.innerHTML = data.map(item => `
+                <div class="bg-white rounded-xl p-5 shadow-lg border-l-8 ${statusColors[item.order_status] || 'border-gray-300'}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="text-lg font-bold">${item.name}</h4>
+                            <p class="text-sm text-gray-500 italic">${item.detail || '-'}</p>
+                        </div>
+                        <span class="font-bold text-orange-500">${item.order_status.toUpperCase()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        loadStatus();
+        setInterval(loadStatus, 5000); // อัปเดตทุก 5 วินาที
+    </script>
+</body>
+</html>
