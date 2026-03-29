@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Register</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-orange': '#ff9800',
+                        'brand-hover': '#f57c00',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body style="background-image: url('../image/bgrestaurant.webp');" 
+      class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] text-white px-4">
+
+    <div class="w-full max-w-md p-8 text-center">
+        
+        <div id="login-section" class="w-full transition-all duration-300">
+            <h1 class="text-4xl font-bold mb-8 drop-shadow-lg">Login</h1>
+            
+            <form id="login-form" class="flex flex-col gap-4">
+                <div class="form-control">
+                    <input type="text" id="login-username" placeholder="username" class="input input-bordered rounded-full w-full bg-white text-black focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required>
+                </div>
+                <div class="form-control">
+                    <input type="password" id="login-password" placeholder="password" class="input input-bordered rounded-full w-full bg-white text-black focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required>
+                </div>
+                
+                <div class="text-left -mt-2 mb-4 pl-4">
+                    <a href="#" class="text-sm text-gray-300 hover:text-white transition-colors">Forgot password?</a>
+                </div>
+                
+                <div class="flex justify-center mb-6">
+                    <button type="submit" class="btn bg-brand-orange hover:bg-brand-hover text-white border-none rounded-full px-12 text-lg shadow-md w-40">Login</button>
+                </div>
+            </form>
+            
+            <p class="text-sm text-gray-300">
+                Don't have an account? 
+                <span id="go-to-register" class="text-brand-orange font-bold cursor-pointer hover:underline">Register</span>
+            </p>
+        </div>
+
+        <div id="register-section" class="w-full hidden transition-all duration-300">
+            <h1 class="text-4xl font-bold mb-8 drop-shadow-lg">Register</h1>
+            
+            <form id="register-form" class="flex flex-col gap-4">
+                <div class="form-control">
+                    <input type="text" placeholder="Username" class="input input-bordered rounded-full w-full bg-white text-black focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required>
+                </div>
+                <div class="form-control">
+                    <input type="password" placeholder="Password" class="input input-bordered rounded-full w-full bg-white text-black focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required>
+                </div>
+                <div class="form-control">
+                    <input type="password" placeholder="Confirm your password" class="input input-bordered rounded-full w-full bg-white text-black focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required>
+                </div>
+                
+                <div class="flex justify-center mt-4 mb-6">
+                    <button type="submit" class="btn bg-brand-orange hover:bg-brand-hover text-white border-none rounded-full px-12 text-lg shadow-md w-40">Register</button>
+                </div>
+            </form>
+            
+            <p class="text-sm text-gray-300">
+                Already have an account? 
+                <span id="go-to-login" class="text-brand-orange font-bold cursor-pointer hover:underline">Login</span>
+            </p>
+        </div>
+
+    </div>
+
+    <script src="../js/login.js"></script>
+
+</body>
+</html>

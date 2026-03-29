@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-4xl bg-white shadow-2xl rounded-lg overflow-hidden flex flex-col">
+        
+        <header class="bg-white px-8 py-5 flex justify-between items-center border-b-2 border-gray-200">
+            <h1 class="text-3xl font-bold text-black">Welcome, Admin</h1>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+            </svg>
+        </header>
+
+        <main class="flex-1 bg-gradient-to-b from-[#db8b22] to-[#382c21] p-8 flex flex-col min-h-[500px]">
+            
+            <div class="bg-white rounded-md p-4 flex items-center mb-8 shadow-sm">
+                <div class="w-14 h-14 bg-gray-200 rounded-full mr-5 shrink-0"></div>
+                <div class="flex flex-col">
+                    <h2 id="admin-name" class="text-xl font-bold text-black m-0 leading-tight">Admin Name</h2>
+                    <p id="admin-role" class="text-sm text-gray-500 m-0">Restaurant Manager</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="menu-management-btn" class="btn bg-white hover:bg-gray-50 text-black border border-gray-300 justify-start px-6 text-lg rounded-md font-bold h-12 shadow-sm">
+                    Menu Management
+                </button>
+                <button id="dashboard-btn" class="btn bg-white hover:bg-gray-50 text-black border border-gray-300 justify-start px-6 text-lg rounded-md font-bold h-12 shadow-sm">
+                    Dashboard
+                </button>
+                <button id="review-btn" class="btn bg-white hover:bg-gray-50 text-black border border-gray-300 justify-start px-6 text-lg rounded-md font-bold h-12 shadow-sm">
+                    Review
+                </button>
+            </div>
+
+            <div class="mt-auto pt-10 flex justify-end">
+                <button id="logout-btn" class="btn bg-[#ff4d4d] hover:bg-[#e60000] text-white border-none rounded-md px-10 text-xl font-bold shadow-md">
+                    Logout
+                </button>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="/js/welcome.js"></script>
+</body>
+</html>

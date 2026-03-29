@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Menu</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body style="background-image: url('../image/bgrestaurant.webp');" 
+      class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-4">
+
+    <div class="w-full max-w-4xl bg-white shadow-2xl rounded-xl overflow-hidden flex flex-col max-h-[90vh]">
+        
+        <div class="bg-white px-6 py-4 flex items-center border-b shrink-0">
+            <button onclick="window.location.href='menu_management.html'" class="text-black font-bold hover:text-orange-600 flex items-center gap-2 cursor-pointer bg-transparent border-none">
+                ◀ Edit Menu
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-8 space-y-6 text-black">
+            
+            <section>
+                <label class="block font-bold mb-2">Change Photo</label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center bg-gray-50">
+                    <img src="https://images.unsplash.com/photo-1559314809-0d155014e29e?w=400" class="max-w-xs rounded-lg shadow-md mb-4">
+                    <button class="btn btn-outline btn-sm">Upload New Image</button>
+                </div>
+            </section>
+
+            <div class="flex gap-2">
+                <button class="btn btn-sm btn-ghost bg-gray-100">Main Course</button>
+                <button class="btn btn-sm btn-ghost bg-gray-100">Appetizer</button>
+                <button class="btn btn-sm btn-ghost bg-gray-100">Dessert</button>
+                <button class="btn btn-sm btn-ghost bg-gray-100">Beverage</button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="form-control">
+                    <label class="label font-bold">Menu Name</label>
+                    <input type="text" value="Pad Thai" class="input input-bordered w-full bg-white border-gray-300" />
+                </div>
+                <div class="form-control">
+                    <label class="label font-bold">Price</label>
+                    <input type="number" value="70" class="input input-bordered w-full bg-white border-gray-300" />
+                    <span class="text-xs text-gray-400 mt-1">Enter the price of the menu item</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-6 pb-4">
+                <button onclick="window.location.href='menu_management.html'" class="btn btn-ghost text-lg">Cancel</button>
+                <button id="save-change-btn" class="btn bg-zinc-800 hover:bg-black text-white px-12 text-lg">Save Change</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/edit_menu.js"></script>
+</body>
+</html>

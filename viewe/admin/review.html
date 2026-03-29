@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Reviews</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body style="background-image: url('../image/bgrestaurant.webp');" 
+      class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-4">
+
+    <div class="w-full max-w-4xl bg-white shadow-2xl rounded-xl overflow-hidden flex flex-col h-[80vh]">
+        
+        <div class="bg-gray-100 px-6 py-4 flex items-center border-b-2 border-gray-200 shrink-0">
+            <button id="back-btn" class="text-black font-bold hover:text-brand-orange transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none">
+                ◀ Back to Dashboard
+            </button>
+            <h1 class="text-2xl font-bold text-black mx-auto">Customer Reviews</h1>
+            <div class="w-24"></div> </div>
+
+        <div id="reviews-container" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-white">
+            </div>
+
+    </div>
+
+    <script src="../js/review.js"></script>
+</body>
+</html>
