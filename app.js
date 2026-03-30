@@ -253,6 +253,16 @@ app.get('/customer/history/:customerId', (req, res) => {
 // (ADMIN) - จัดการหลังบ้าน
 // #####################################################################################
 
+// =================================================================
+// Page Routes (เรียกหน้าเว็บ HTML ฝั่ง ADMIN) - สไตล์บรรทัดเดียว
+// =================================================================
+app.get('/admin/page/login', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/login.html')));
+app.get('/admin/page/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/dashboard.html')));
+app.get('/admin/page/stock', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/stock.html')));
+app.get('/admin/page/cooks', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/cooks.html')));
+app.get('/admin/page/payments', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/payments.html')));
+
+
 // 1. สร้าง Admin ใหม่ (ยิงเพื่อเทสเอาข้อมูลเข้า MySQL)
 app.post('/admin/register', async (req, res) => {
     const { username, password } = req.body;
@@ -318,9 +328,7 @@ app.post('/admin/login', (req, res) => {
     });
 });
 
-// =========================================================
-// 👇 เติมโค้ดส่วนที่ขาดไปตรงนี้แล้วครับ (อิงตามตาราง API Spec) 👇
-// =========================================================
+
 
 // 3. ดูรายชื่อกุ๊กทั้งหมด
 app.get('/admin/cooks', (req, res) => {
