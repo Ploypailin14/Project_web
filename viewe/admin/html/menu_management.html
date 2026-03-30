@@ -13,7 +13,7 @@
     <div class="w-full max-w-4xl bg-white/10 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
         
         <div class="bg-white/90 px-6 py-4 flex items-center border-b shrink-0">
-            <button id="back-to-admin" class="text-black font-bold hover:text-orange-600 flex items-center gap-2 cursor-pointer bg-transparent border-none">
+            <button onclick="window.location.href='/admin/page/welcome'" id="back-to-admin" class="text-black font-bold hover:text-orange-600 flex items-center gap-2 cursor-pointer bg-transparent border-none">
                 ◀ Menu Management
             </button>
         </div>
@@ -28,7 +28,7 @@
                 </div>
                 <div class="flex gap-2">
                     <button class="btn btn-sm bg-pink-200 hover:bg-pink-300 border-none text-black rounded-full px-6">Disable</button>
-                    <button onclick="window.location.href='edit_menu.html'" class="btn btn-sm bg-sky-200 hover:bg-sky-300 border-none text-black rounded-full px-6">Edit</button>
+                    <button onclick="window.location.href='/admin/page/edit-menu'" class="btn btn-sm bg-sky-200 hover:bg-sky-300 border-none text-black rounded-full px-6">Edit</button>
                 </div>
             </div>
 
@@ -40,7 +40,7 @@
                 </div>
                 <div class="flex gap-2">
                     <button class="btn btn-sm bg-pink-200 hover:bg-pink-300 border-none text-black rounded-full px-6">Disable</button>
-                    <button class="btn btn-sm bg-sky-200 hover:bg-sky-300 border-none text-black rounded-full px-6">Edit</button>
+                    <button onclick="window.location.href='/admin/page/edit-menu'" class="btn btn-sm bg-sky-200 hover:bg-sky-300 border-none text-black rounded-full px-6">Edit</button>
                 </div>
             </div>
 
@@ -52,19 +52,18 @@
                 </div>
                 <div class="flex gap-2">
                     <button class="btn btn-sm bg-pink-200 hover:bg-pink-300 border-none text-black rounded-full px-6">Disable</button>
-                    <button class="btn btn-sm bg-sky-200 hover:bg-sky-300 border-none text-black rounded-full px-6">Edit</button>
+                    <button onclick="window.location.href='/admin/page/edit-menu'" class="btn btn-sm bg-sky-200 hover:bg-sky-300 border-none text-black rounded-full px-6">Edit</button>
                 </div>
             </div>
 
         </div>
 
         <div class="p-6 bg-transparent flex justify-center">
-            <button class="btn bg-zinc-800 hover:bg-black text-white border-none w-full max-w-md text-xl font-bold rounded-lg h-14">
+            <button onclick="window.location.href='/admin/page/edit-menu'" class="btn bg-zinc-800 hover:bg-black text-white border-none w-full max-w-md text-xl font-bold rounded-lg h-14">
                 + Add new menu
             </button>
         </div>
     </div>
 
-    <script src="/viewe/admin/menu_management.html"></script>
 </body>
 </html>
