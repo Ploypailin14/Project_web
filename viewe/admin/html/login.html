@@ -48,7 +48,7 @@
             
             <p class="text-sm text-gray-300">
                 Don't have an account? 
-                <span id="go-to-register" class="text-brand-orange font-bold cursor-pointer hover:underline">Register</span>
+                <span id="go-to-register" class="text-brand-orange font-bold cursor-pointer hover:underline" onclick="document.getElementById('login-section').classList.add('hidden'); document.getElementById('register-section').classList.remove('hidden');">Register</span>
             </p>
         </div>
 
@@ -67,19 +67,49 @@
                 </div>
                 
                 <div class="flex justify-center mt-4 mb-6">
-                    <button type="submit" class="btn bg-brand-orange hover:bg-brand-hover text-white border-none rounded-full px-12 text-lg shadow-md w-40">Register</button>
+                    <button type="button" class="btn bg-brand-orange hover:bg-brand-hover text-white border-none rounded-full px-12 text-lg shadow-md w-40">Register</button>
                 </div>
             </form>
             
             <p class="text-sm text-gray-300">
                 Already have an account? 
-                <span id="go-to-login" class="text-brand-orange font-bold cursor-pointer hover:underline">Login</span>
+                <span id="go-to-login" class="text-brand-orange font-bold cursor-pointer hover:underline" onclick="document.getElementById('register-section').classList.add('hidden'); document.getElementById('login-section').classList.remove('hidden');">Login</span>
             </p>
         </div>
 
     </div>
 
-    <script src="./viewe/admin/js/login.js"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault(); // ป้องกันไม่ให้หน้าเว็บกระพริบ (Refresh)
 
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                // ยิง API ไปหาหลังบ้าน (ที่นายทำไว้)
+                const response = await fetch('/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert("เข้าสู่ระบบสำเร็จ!");
+                    // เก็บ Token ไว้เผื่อใช้ (ถ้ามี)
+                    localStorage.setItem('adminToken', data.token);
+                    // เปลี่ยนหน้าไปที่ Welcome ทันที!
+                    window.location.href = '/admin/page/welcome';
+                } else {
+                    const errorMsg = await response.text();
+                    alert("เข้าสู่ระบบล้มเหลว: " + errorMsg);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+            }
+        });
+    </script>
 </body>
 </html>
