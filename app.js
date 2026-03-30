@@ -254,13 +254,14 @@ app.get('/customer/history/:customerId', (req, res) => {
 // #####################################################################################
 
 // =================================================================
-// Page Routes (เรียกหน้าเว็บ HTML ฝั่ง ADMIN) - สไตล์บรรทัดเดียว
+// Page Routes Admin
 // =================================================================
-app.get('/admin/page/login', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/login.html')));
-app.get('/admin/page/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/dashboard.html')));
-app.get('/admin/page/stock', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/stock.html')));
-app.get('/admin/page/cooks', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/cooks.html')));
-app.get('/admin/page/payments', (req, res) => res.sendFile(path.join(__dirname, 'views/admin/payments.html')));
+app.get('/admin/page/login', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/login.html')));
+app.get('/admin/page/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/dashboard.html')));
+app.get('/admin/page/welcome', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/welcome.html')));
+app.get('/admin/page/menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/menu_management.html')));
+app.get('/admin/page/edit-menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/edit_menu.html')));
+app.get('/admin/page/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/review.html')));
 
 
 // 1. สร้าง Admin ใหม่ (ยิงเพื่อเทสเอาข้อมูลเข้า MySQL)
