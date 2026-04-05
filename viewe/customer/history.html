@@ -2,39 +2,96 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>History</title>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="bg-white p-6 shadow-sm sticky top-0 flex justify-between items-center">
-        <h1 class="text-xl font-bold">Order History</h1>
-        <button onclick="location.href='/status'" class="text-orange-500 font-bold">Back</button>
-    </div>
+<body style="background-image: url('/public/image/BG.png');" class="min-h-screen bg-cover bg-center bg-fixed bg-blend-overlay bg-gradient-to-b from-[#db8b22]/80 to-[#382c21]/90 font-sans p-6">
 
-    <div id="historyList" class="p-4 space-y-4"></div>
+    <div class="max-w-md mx-auto space-y-6">
+        <h1 class="text-white/70 text-lg font-bold ml-2">History</h1>
+
+        <div id="historyList" class="space-y-6">
+            </div>
+
+        <div id="finishAction" class="hidden pt-4">
+            <button onclick="finishSession()" 
+                    class="w-full bg-[#f39c12] hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 text-xl">
+                Finish
+            </button>
+        </div>
+    </div>
 
     <script>
         async function loadHistory() {
-            // 💡 ใช้ customerId และแก้ order.created_at เป็น order.order_time
-            const customerId = localStorage.getItem('customerId');
-            const res = await fetch(`/customer/history/${customerId}`);
-            const data = await res.json();
-            const container = document.getElementById('historyList');
+            try {
+                const customerId = localStorage.getItem('customerId');
+                const tableNo = localStorage.getItem('tableNumber') || '??';
+                const res = await fetch(`/customer/history/${customerId}`);
+                const data = await res.json();
+                const container = document.getElementById('historyList');
 
-            container.innerHTML = data.map(order => `
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between mb-2">
-                        <span class="font-bold text-lg">Order #${order.order_id}</span>
-                        <span class="text-gray-400 text-sm">${new Date(order.order_time).toLocaleTimeString()}</span>
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="bg-white p-10 rounded-[2rem] text-center font-bold text-gray-400">ยังไม่มีประวัติการสั่งซื้อ</div>';
+                    return;
+                }
+
+                // วาดการ์ดออเดอร์ตามดีไซน์ในรูป
+                container.innerHTML = data.map(order => {
+                    const dateObj = new Date(order.order_time);
+                    const formattedDate = dateObj.toLocaleDateString('en-GB', {
+                        day: '2-digit', month: 'short', year: 'numeric'
+                    });
+
+                    return `
+                    <div class="bg-white rounded-[1.5rem] p-6 shadow-2xl relative overflow-hidden">
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-4 mb-4">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800">Order <span class="text-red-500">#${order.order_id}</span></h2>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-gray-600 text-lg">Table | ${tableNo}</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 mb-6">
+                            <p class="text-gray-500 font-bold uppercase text-xs tracking-widest">Status</p>
+                            <p class="text-green-600 font-bold">Successfully Served & Paid</p>
+                        </div>
+
+                        <div class="border-t border-gray-50 pt-4 space-y-1">
+                            <p class="text-gray-800 font-bold text-lg">Total : ${order.total_price}฿</p>
+                            <p class="text-gray-500 text-sm font-medium">Date : ${formattedDate}</p>
+                        </div>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Total: ${order.total_price}฿</span>
-                        <button onclick="location.href='/review?id=${order.order_id}'" 
-                                class="bg-blue-500 text-white px-4 py-1 rounded-lg text-sm">Review</button>
-                    </div>
-                </div>
-            `).join('');
+                    `;
+                }).join('');
+
+                // แสดงปุ่ม Finish
+                document.getElementById('finishAction').classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error loading history:", error);
+            }
         }
+
+        // ฟังก์ชันล้างเซสชันและจบการทำงาน
+        function finishSession() {
+            Swal.fire({
+                title: 'ขอบคุณที่ใช้บริการ',
+                text: 'ระบบจะนำคุณกลับไปยังหน้าหลัก และล้างข้อมูลโต๊ะของคุณ',
+                icon: 'success',
+                confirmButtonColor: '#f39c12',
+                confirmButtonText: 'กลับหน้าหลัก'
+            }).then(() => {
+                // 💡 ล้าง LocalStorage ทั้งหมดเพื่อให้เครื่องนี้พร้อมรับลูกค้าคนใหม่
+                localStorage.clear();
+                // ส่งกลับไปหน้าเริ่มแรก (หน้าเลือกโต๊ะ)
+                window.location.href = '/';
+            });
+        }
+
         loadHistory();
     </script>
 </body>
