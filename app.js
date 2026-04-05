@@ -136,14 +136,39 @@ app.put('/admin/menu/status/:id', (req, res) => {
     });
 });
 
+// เพิ่มเมนูใหม่ (รับไฟล์รูปภาพ + หมวดหมู่)
 app.post('/admin/menu', upload.single('imageFile'), (req, res) => {
-    const { name, price } = req.body;
+    const { name, price, category } = req.body; // 💡 รับค่า category มาด้วย
     const imagePath = req.file ? `/public/image/${req.file.filename}` : '';
-    const sql = "INSERT INTO menu_item (name, price, status, image) VALUES (?, ?, 'available', ?)";
-    con.query(sql, [name, price, imagePath], (err, result) => {
+    
+    // 💡 เพิ่มคอลัมน์ category ในคำสั่ง SQL
+    const sql = "INSERT INTO menu_item (name, price, status, image, category) VALUES (?, ?, 'available', ?, ?)";
+    con.query(sql, [name, price, imagePath, category || 'Main Course'], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json({ message: "added" });
     });
+});
+
+// อัปเดตเมนู (แก้ไขชื่อ ราคา รูปภาพ หรือหมวดหมู่)
+app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
+    const { name, price, status, category } = req.body; // 💡 รับค่า category
+    
+    if (req.file) {
+        const imagePath = `/public/image/${req.file.filename}`;
+        // 💡 เพิ่มการอัปเดต category
+        const sql = "UPDATE menu_item SET name = ?, price = ?, status = ?, image = ?, category = ? WHERE menu_id = ?";
+        con.query(sql, [name, price, status || 'available', imagePath, category || 'Main Course', req.params.id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(200).json({ message: "updated with image" });
+        });
+    } else {
+        // 💡 เพิ่มการอัปเดต category
+        const sql = "UPDATE menu_item SET name = ?, price = ?, status = ?, category = ? WHERE menu_id = ?";
+        con.query(sql, [name, price, status || 'available', category || 'Main Course', req.params.id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(200).json({ message: "updated without image" });
+        });
+    }
 });
 
 app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
