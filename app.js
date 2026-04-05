@@ -171,24 +171,6 @@ app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
     }
 });
 
-app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
-    const { name, price, status } = req.body; 
-    if (req.file) {
-        const imagePath = `/public/image/${req.file.filename}`;
-        const sql = "UPDATE menu_item SET name = ?, price = ?, status = ?, image = ? WHERE menu_id = ?";
-        con.query(sql, [name, price, status || 'available', imagePath, req.params.id], (err, result) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(200).json({ message: "updated with image" });
-        });
-    } else {
-        const sql = "UPDATE menu_item SET name = ?, price = ?, status = ? WHERE menu_id = ?";
-        con.query(sql, [name, price, status || 'available', req.params.id], (err, result) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(200).json({ message: "updated without image" });
-        });
-    }
-});
-
 // 🌟 จัดการ Cook 🌟
 app.get('/admin/cooks', (req, res) => {
     con.query("SELECT cook_id, status, password FROM cook", (err, results) => {
@@ -272,7 +254,8 @@ app.post('/customer/order', (req, res) => {
 });
 
 app.get('/customer/status/:customerId', (req, res) => {
-    const sql = `SELECT ot.status as order_status, mi.name, oi.detail, oi.quantity 
+    // 💡 เพิ่ม mi.price เข้ามาในคำสั่ง SELECT เพื่อให้หน้าเว็บเอาไปคำนวณยอดรวมได้
+    const sql = `SELECT ot.status as order_status, mi.name, mi.price, oi.detail, oi.quantity 
                  FROM order_table ot JOIN order_item oi ON ot.order_id = oi.order_id 
                  JOIN menu_item mi ON oi.menu_id = mi.menu_id 
                  WHERE ot.customer_id = ? ORDER BY ot.order_id DESC`;
@@ -307,13 +290,49 @@ app.post('/customer/review', (req, res) => {
 });
 
 app.get('/customer/history/:customerId', (req, res) => {
-    const sql = `SELECT ot.order_id, ot.order_time, SUM(oi.quantity * (mi.price + oi.extra_price)) as total_price
-                 FROM order_table ot JOIN order_item oi ON ot.order_id = oi.order_id
-                 JOIN menu_item mi ON oi.menu_id = mi.menu_id
-                 WHERE ot.customer_id = ? GROUP BY ot.order_id`;
+    // 💡 ป้องกันกรณี extra_price เป็นค่าว่าง (NULL) ด้วย IFNULL
+    const sql = `
+        SELECT 
+            ot.order_id, 
+            ot.order_time, 
+            ot.status,
+            mi.name as menu_name,
+            oi.quantity,
+            (oi.quantity * (mi.price + IFNULL(oi.extra_price, 0))) as item_price
+        FROM order_table ot 
+        JOIN order_item oi ON ot.order_id = oi.order_id
+        JOIN menu_item mi ON oi.menu_id = mi.menu_id
+        WHERE ot.customer_id = ? 
+        ORDER BY ot.order_time DESC
+    `;
+    
     con.query(sql, [req.params.customerId], (err, results) => {
-        if (err) return res.status(500).json(err);
-        res.json(results);
+        if (err) {
+            console.error("History Error:", err);
+            return res.status(500).json({ error: "Database error" });
+        }
+
+        const ordersMap = {};
+        results.forEach(row => {
+            if (!ordersMap[row.order_id]) {
+                ordersMap[row.order_id] = {
+                    order_id: row.order_id,
+                    order_time: row.order_time,
+                    status: row.status,
+                    total_price: 0,
+                    items: []
+                };
+            }
+            // 💡 พระเอกอยู่ตรงนี้: ใช้ Number() บังคับให้มันเป็นตัวเลขก่อนเอามาบวกกัน
+            ordersMap[row.order_id].total_price += Number(row.item_price || 0);
+            
+            ordersMap[row.order_id].items.push({
+                name: row.menu_name,
+                qty: row.quantity
+            });
+        });
+
+        res.json(Object.values(ordersMap));
     });
 });
 
@@ -424,15 +443,35 @@ app.get("/cook/dashboard", (req, res) => {
     });
 });
 
+// 💡 แก้ไข API ดึงรีวิว เพื่อให้โชว์ "เลขโต๊ะ (table_id)" แทนรหัสคิว
 app.get("/api/get_reviews.php", (req, res) => {
     const summarySql = `SELECT IFNULL(AVG(rating), 0) as average, COUNT(*) as total FROM review`;
-    const reviewsSql = `SELECT r.rating, r.comment, r.review_time as createdAt, o.customer_id as tableNo FROM review r LEFT JOIN order_table o ON r.order_id = o.order_id ORDER BY r.review_time DESC`;
+    
+    // JOIN กับ customer_session เพื่อเอา cs.table_id มาแทน o.customer_id
+    const reviewsSql = `
+        SELECT 
+            r.rating, 
+            r.comment, 
+            r.review_time as createdAt, 
+            cs.table_id as tableNo 
+        FROM review r 
+        LEFT JOIN order_table o ON r.order_id = o.order_id 
+        LEFT JOIN customer_session cs ON o.customer_id = cs.customer_id
+        ORDER BY r.review_time DESC
+    `;
 
     con.query(summarySql, (err1, summaryRes) => {
         if (err1) return res.status(500).json({ success: false, message: err1.message });
         con.query(reviewsSql, (err2, reviewsRes) => {
             if (err2) return res.status(500).json({ success: false, message: err2.message });
-            res.json({ success: true, summary: { average: parseFloat(summaryRes[0].average).toFixed(1), total: summaryRes[0].total }, reviews: reviewsRes });
+            res.json({ 
+                success: true, 
+                summary: { 
+                    average: parseFloat(summaryRes[0].average).toFixed(1), 
+                    total: summaryRes[0].total 
+                }, 
+                reviews: reviewsRes 
+            });
         });
     });
 });
