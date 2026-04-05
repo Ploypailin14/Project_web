@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Dashboard - Cooks</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body style="background-image: url('/public/image/BG.png');" class="min-h-screen bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] font-sans">
+
+<div id="app" class="flex flex-col min-h-screen">
+    
+    <nav id="main-nav" style="display: none;" class="bg-zinc-900 shadow-xl px-6 py-4 sticky top-0 z-50 flex justify-between items-center">
+        <div class="flex items-center gap-2 text-white font-black text-2xl tracking-widest">
+            👨‍🍳 KITCHEN <span class="text-orange-500">BOARD</span>
+        </div>
+        <div class="nav-links flex gap-6">
+            <a onclick="showPage('orders')" id="nav-orders" class="text-orange-500 border-b-2 border-orange-500 pb-1 font-bold cursor-pointer transition-all hover:text-orange-400">ORDERS</a>
+            <a onclick="showPage('dashboard')" id="nav-dashboard" class="text-gray-400 border-b-2 border-transparent pb-1 font-bold cursor-pointer transition-all hover:text-orange-400">DASHBOARD</a>
+            <a onclick="showPage('reviews')" id="nav-reviews" class="text-gray-400 border-b-2 border-transparent pb-1 font-bold cursor-pointer transition-all hover:text-orange-400">REVIEWS</a>
+        </div>
+        <a class="btn btn-sm btn-error text-white font-bold rounded-full px-6 shadow-lg" onclick="logout()" style="cursor: pointer;">Logout</a>
+    </nav>
+
+    <div id="login-page" class="page flex-1 flex flex-col justify-center items-center p-6 transition-opacity duration-300">
+        <div class="text-white font-black text-5xl mb-8 drop-shadow-xl tracking-tight">Cooks Portal</div>
+        
+        <div class="bg-white/10 backdrop-blur-md p-10 rounded-3xl w-full max-w-sm shadow-2xl border border-white/20">
+            <div class="flex mb-8 text-center border-b border-white/20">
+                <button id="btn-login" class="flex-1 pb-3 font-bold text-white border-b-2 border-orange-500 transition-all" onclick="toggleAuth('login')">Log in</button>
+                <button id="btn-signup" class="flex-1 pb-3 font-bold text-gray-400 border-b-2 border-transparent transition-all hover:text-gray-200" onclick="toggleAuth('signup')">Sign Up</button>
+            </div>
+            
+            <div class="space-y-5">
+                <input type="number" id="cook-id-input" placeholder="Cook ID (ตัวเลขเท่านั้น)" class="w-full bg-transparent border-b-2 border-gray-300 text-white px-2 py-3 focus:outline-none focus:border-orange-500 placeholder-gray-300 transition-colors">
+                
+                <input type="password" id="password-input" placeholder="Password" class="w-full bg-transparent border-b-2 border-gray-300 text-white px-2 py-3 focus:outline-none focus:border-orange-500 placeholder-gray-300 transition-colors">
+                
+                <div id="confirm-pw-group" class="hidden">
+                    <input type="password" id="confirm-password-input" placeholder="Confirm Password" class="w-full bg-transparent border-b-2 border-gray-300 text-white px-2 py-3 focus:outline-none focus:border-orange-500 placeholder-gray-300 transition-colors">
+                </div>
+                
+                <button id="submit-btn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black text-lg py-4 rounded-xl mt-4 shadow-lg transition-transform active:scale-95" onclick="handleAuth()">Log in</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="orders" class="page hidden flex-1 p-8">
+        <h2 class="text-white text-3xl font-black mb-8 drop-shadow-md">Active Orders</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto" id="orders-container">
+            </div>
+    </div>
+    
+    <div id="dashboard" class="page hidden flex-1 p-8">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-white text-3xl font-black mb-8 drop-shadow-md text-center">Kitchen Performance</h2>
+            
+            <div class="bg-white/95 backdrop-blur-sm rounded-3xl p-8 flex items-center justify-center gap-6 shadow-2xl mb-10 w-full md:w-1/2 mx-auto border border-white/50 transform transition hover:scale-105">
+                <div class="text-6xl">🍽️</div>
+                <div class="flex flex-col">
+                    <span class="text-gray-500 font-bold text-lg">Today Served Menus</span>
+                    <span id="today-served-count" class="text-5xl font-black text-zinc-900">0</span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+                <div class="bg-zinc-900 text-white text-center py-4">
+                    <h3 class="text-xl font-bold">Top Menus Leaderboard</h3>
+                    <p class="text-sm text-gray-400">เมนูที่ขายดีที่สุดของวันนี้</p>
+                </div>
+                <div class="overflow-x-auto p-4">
+                    <table class="table w-full text-lg">
+                        <thead class="bg-orange-100 text-orange-900 text-lg">
+                            <tr>
+                                <th class="pl-6">Rank</th>
+                                <th>Menu Name</th>
+                                <th>Total Served</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body" class="text-zinc-800 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reviews" class="page hidden flex-1 p-8">
+        <div class="max-w-3xl mx-auto">
+            <h2 class="text-white text-3xl font-black mb-8 drop-shadow-md text-center">Customer Feedbacks</h2>
+            
+            <div class="text-center mb-10 bg-zinc-900/50 backdrop-blur-md py-8 rounded-3xl shadow-xl border border-white/10">
+                <h1 class="text-7xl font-black text-yellow-400 drop-shadow-lg tracking-widest" id="avg-stars-display"></h1>
+                <p class="text-2xl font-bold text-white mt-2" id="avg-score-text"></p>
+            </div>
+            
+            <div id="reviews-list-container" class="space-y-4">
+                </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="/viewe/Cook/Cook.js"></script>
+</body>
+</html>

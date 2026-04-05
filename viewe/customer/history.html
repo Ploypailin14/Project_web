@@ -15,8 +15,9 @@
 
     <script>
         async function loadHistory() {
-            const sessionId = localStorage.getItem('sessionId');
-            const res = await fetch(`/customer/history/${sessionId}`);
+            // 💡 ใช้ customerId และแก้ order.created_at เป็น order.order_time
+            const customerId = localStorage.getItem('customerId');
+            const res = await fetch(`/customer/history/${customerId}`);
             const data = await res.json();
             const container = document.getElementById('historyList');
 
@@ -24,7 +25,7 @@
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                     <div class="flex justify-between mb-2">
                         <span class="font-bold text-lg">Order #${order.order_id}</span>
-                        <span class="text-gray-400 text-sm">${new Date(order.created_at).toLocaleTimeString()}</span>
+                        <span class="text-gray-400 text-sm">${new Date(order.order_time).toLocaleTimeString()}</span>
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-gray-600">Total: ${order.total_price}฿</span>

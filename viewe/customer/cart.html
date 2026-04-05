@@ -43,14 +43,33 @@
 
         async function confirmOrder() {
             if(cart.length === 0) return Swal.fire('ตะกร้าว่างเปล่า', '', 'info');
-            const res = await fetch('/customer/menu', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: localStorage.getItem('sessionId'), items: cart })
-            });
-            if(res.ok) {
-                localStorage.removeItem('cart');
-                Swal.fire('สั่งสำเร็จ!', 'ออเดอร์ถูกส่งเข้าครัวแล้ว', 'success').then(() => location.href = '/status');
+            
+            const customerId = localStorage.getItem('customerId');
+            
+            // 💡 เพิ่มการเช็คว่ามี ID โต๊ะหรือยัง ถ้ายังให้เด้งกลับไปหน้าแรก
+            if(!customerId) {
+                return Swal.fire('ไม่พบข้อมูลโต๊ะ', 'กรุณากลับไปหน้าแรกเพื่อสแกน/เลือกโต๊ะใหม่', 'warning')
+                    .then(() => location.href = '/');
+            }
+            
+            try {
+                const res = await fetch('/customer/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_id: customerId, items: cart })
+                });
+                
+                if(res.ok) {
+                    localStorage.removeItem('cart');
+                    Swal.fire('สั่งสำเร็จ!', 'ออเดอร์ถูกส่งเข้าครัวแล้ว', 'success').then(() => location.href = '/status');
+                } else {
+                    // 💡 ถ้าพัง ให้ดึงข้อความ Error จากหลังบ้านมาโชว์ให้รู้ไปเลยว่าพังที่อะไร!
+                    const errData = await res.json();
+                    console.error("Backend Error:", errData);
+                    Swal.fire('ผิดพลาด', 'เซิร์ฟเวอร์แจ้งว่า: ' + (errData.error || 'ไม่สามารถสั่งอาหารได้'), 'error');
+                }
+            } catch (e) {
+                Swal.fire('ผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
             }
         }
 

@@ -24,19 +24,46 @@
     </div>
     <script>
         const amount = new URLSearchParams(window.location.search).get('total');
-        document.getElementById('finalAmount').innerText = amount + '฿';
+        const orderId = new URLSearchParams(window.location.search).get('id') || 0; 
+        
+        document.getElementById('finalAmount').innerText = (amount || 0) + '฿';
+        
         async function pay() {
             const method = document.querySelector('input[name="method"]:checked').value;
-            const res = await fetch('/customer/payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: localStorage.getItem('sessionId'), amount: amount, method: method })
-            });
-            if(res.ok) {
-                Swal.fire('เรียบร้อย!', 'กรุณารอพนักงานมาตรวจสอบที่โต๊ะ', 'success').then(() => {
-                    localStorage.clear();
-                    location.href = '/';
+            const customerId = localStorage.getItem('customerId') || 1; 
+
+            try {
+                // 1. ส่งข้อมูลไปให้หลังบ้านบันทึกลง Database
+                const res = await fetch('/customer/payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        customer_id: customerId, 
+                        order_id: orderId, 
+                        amount: amount, 
+                        method: method 
+                    })
                 });
+
+                const data = await res.json(); // อ่านผลลัพธ์ที่หลังบ้านตอบกลับมา
+
+                if (res.ok) {
+                    // 2. ถ้าบันทึกลงตาราง payment สำเร็จจริงๆ ค่อยให้ผ่าน
+                    Swal.fire({
+                        title: 'เรียบร้อย!',
+                        text: 'บันทึกยอดเงินเข้าสู่ระบบแล้ว',
+                        icon: 'success',
+                        confirmButtonColor: '#ea580c'
+                    }).then(() => {
+                        window.location.href = `/customer/review?id=${orderId}`;
+                    });
+                } else {
+                    // 3. ถ้า MySQL เตะออก ให้แสดงสาเหตุที่หน้าจอเลย
+                    Swal.fire('บันทึกไม่สำเร็จ', 'สาเหตุจาก DB: ' + (data.error || 'Unknown Error'), 'error');
+                    console.error("Backend Error Detail:", data);
+                }
+            } catch (error) {
+                Swal.fire('เชื่อมต่อล้มเหลว', error.message, 'error');
             }
         }
     </script>

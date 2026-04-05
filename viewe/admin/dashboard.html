@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Stats</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col m-0 font-sans">
+
+    <header class="bg-white px-10 py-5 flex items-center shadow-md z-10 w-full shrink-0 border-b-2 border-gray-100">
+        <button onclick="window.location.href='/admin/page/welcome'" class="text-gray-500 hover:text-orange-600 font-bold text-lg flex items-center gap-2 transition-colors cursor-pointer bg-transparent border-none">
+            ◀ Back to Admin
+        </button>
+        <h1 class="text-3xl font-black text-gray-800 ml-auto mr-auto pr-24 tracking-tight">Dashboard Stats</h1>
+    </header>
+
+    <main style="background-image: url('/public/image/BG.png');" 
+          class="flex-1 bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-8 flex flex-col items-center w-full">
+        
+        <div class="w-full max-w-5xl flex flex-col gap-8 mt-4">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white/95 backdrop-blur-sm rounded-2xl py-6 px-4 flex flex-col items-center justify-center shadow-xl border border-white/50 transform transition hover:-translate-y-1">
+                    <div class="text-gray-500 font-bold text-lg mb-2">Customer Today</div>
+                    <div class="text-black font-black text-4xl flex items-center gap-3">
+                        <span class="text-blue-500 text-3xl">👥</span> <span id="customer-count">0</span>
+                    </div>
+                </div>
+
+                <div class="bg-white/95 backdrop-blur-sm rounded-2xl py-6 px-4 flex flex-col items-center justify-center shadow-xl border border-white/50 transform transition hover:-translate-y-1">
+                    <div class="text-gray-500 font-bold text-lg mb-2">Revenue Today</div>
+                    <div class="text-black font-black text-4xl flex items-center gap-3">
+                        <span class="text-green-500 text-3xl">💰</span> <span id="revenue-amount">0 ฿</span>
+                    </div>
+                </div>
+
+                <div class="bg-white/95 backdrop-blur-sm rounded-2xl py-6 px-4 flex flex-col items-center justify-center shadow-xl border border-white/50 transform transition hover:-translate-y-1">
+                    <div class="text-gray-500 font-bold text-lg mb-2">Average Rating</div>
+                    <div class="text-black font-black text-4xl flex items-center gap-3">
+                        <span class="text-yellow-400 text-3xl">⭐</span> <span id="rating-score">0.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex flex-col items-center">
+                <h2 class="text-3xl font-black text-white text-center mb-8 drop-shadow-md">🏆 Top 3 Best Sellers</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full" id="top-menu-container">
+                    
+                    <div class="bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col transform transition hover:scale-105">
+                        <div class="absolute top-3 left-3 bg-red-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md z-10">#1 Best Seller</div>
+                        <img src="https://images.unsplash.com/photo-1559314809-0d155014e29e?auto=format&fit=crop&w=400&q=80" class="w-full h-48 object-cover">
+                        <div class="text-center text-black font-bold text-xl py-4">Pad Thai</div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col transform transition hover:scale-105">
+                        <div class="absolute top-3 left-3 bg-orange-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md z-10">#2 Best Seller</div>
+                        <img src="https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=400&q=80" class="w-full h-48 object-cover">
+                        <div class="text-center text-black font-bold text-xl py-4">Fried Rice</div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col transform transition hover:scale-105">
+                        <div class="absolute top-3 left-3 bg-yellow-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md z-10">#3 Best Seller</div>
+                        <img src="https://images.unsplash.com/photo-1499638673689-79a0b5115d87?auto=format&fit=crop&w=400&q=80" class="w-full h-48 object-cover">
+                        <div class="text-center text-black font-bold text-xl py-4">Thai Tea</div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="/public/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,109 +1,212 @@
 const express = require('express');
-const app = express();
-const con = require('./db')
+const cors = require('cors');
 const path = require('path');
 const argon2 = require('argon2');
-const cors = require('cors');
+const bcrypt = require('bcrypt'); 
+const jwt = require('jsonwebtoken'); 
+const con = require('./db'); 
 
-app.use(cors()); // อนุญาตให้ Frontend จากพอร์ตอื่นเรียกใช้งาน API ได้
+// นำเข้า Multer สำหรับจัดการไฟล์รูปภาพ
+const multer = require('multer');
+
+const app = express();
+const JWT_SECRET = "my_super_secret_restaurant_key_2026"; 
+
+app.use(cors()); 
 app.use(express.json());
 app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname)); 
 
-// hashing password
+// ตั้งค่าการจัดเก็บไฟล์รูปภาพ
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'public/image/') 
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname) 
+    }
+});
+const upload = multer({ storage: storage });
+
+// #####################################################################################
+// 👑 (ADMIN) - ระบบหลังบ้าน
+// #####################################################################################
+
+app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/login.html')));
+app.get('/admin/page/login', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/login.html')));
+app.get('/admin/page/welcome', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/welcome.html')));
+app.get('/admin/page/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/dashboard.html')));
+app.get('/admin/page/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/review.html')));
+app.get('/admin/page/menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/menu_management.html')));
+app.get('/admin/page/edit-menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/edit_menu.html')));
+app.get('/admin/page/cook', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/cook_management.html')));
+
 app.get('/password/:raw', (req, res) => {
-const raw = req.params.raw;
-const hash = argon2.hashSync(raw);
-// console.log(hash.length);
-// 97 characters
-res.send(hash);
+    res.send(argon2.hashSync(req.params.raw));
 });
 
-// login
+app.post('/admin/register', async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).send('Please provide username and password');
+    try {
+        const hashPassword = await argon2.hash(password);
+        const sql = "INSERT INTO admin (username, password, role) VALUES (?, ?, 'admin')";
+        con.query(sql, [username, hashPassword], (err, result) => {
+            if (err) return res.status(500).json({ error: "Failed to create admin." });
+            res.status(201).json({ message: 'Admin created successfully!', username: username });
+        });
+    } catch (error) { res.status(500).send('Error encrypting password'); }
+});
+
 app.post('/admin/login', async function(req, res) {
     const { username, password } = req.body;
-
-    // 1. เปลี่ยนชื่อคอลัมน์ใน SELECT เป็น password (ตามที่คุณแจ้งมา)
     const sql = "SELECT username, password FROM admin WHERE username = ?";
-    
     con.query(sql, [username], async function(err, results) {
-        if (err) {
-            console.error(err);
-            return res.status(500).send('Server error');
-        }
-
-        // 2. ตรวจสอบว่ามี username นี้ในระบบไหม
-        if (results.length !== 1) {
-            return res.status(401).send('Wrong username');
-        }
-
+        if (err) return res.status(500).send('Server error');
+        if (results.length !== 1) return res.status(401).send('Wrong username');
         try {
-            // 3. ใช้ argon2.verify เทียบ password จาก body กับ password (hash) จาก DB
-            // ต้องใช้ await เพราะเป็น Async
             const isMatch = await argon2.verify(results[0].password, password);
+            if (!isMatch) return res.status(401).send('Wrong password');
+            res.status(200).json({ message: 'Login OK', username: results[0].username });
+        } catch (error) { res.status(500).send('Internal verification error'); }
+    });
+});
 
-            if (!isMatch) {
-                return res.status(401).send('Wrong password');
-            }
+app.get('/admin/dashboard', function(req, res) {
+    const sqlCustomer = `SELECT COUNT(customer_id) AS customer_count FROM customer_session WHERE DATE(login_time) = CURDATE()`;
+    const sqlRevenue = `SELECT SUM(amount) AS total_revenue FROM payment WHERE DATE(payment_date) = CURDATE()`;
+    const sqlAllTime = `SELECT (SELECT SUM(amount) FROM payment) as all_time_revenue, (SELECT AVG(rating) FROM review) as avg_rating`;
 
-            // 4. Login สำเร็จ
-            res.status(200).json({
-                message: 'Login OK',
-                username: results[0].username
+    con.query(sqlCustomer, (err, cRes) => {
+        if(err) return res.status(500).send('Database error');
+        con.query(sqlRevenue, (err, rRes) => {
+            if(err) return res.status(500).send('Database error');
+            con.query(sqlAllTime, (err, aRes) => {
+                if(err) return res.status(500).send('Database error');
+                res.status(200).json({
+                    customer_count: cRes[0].customer_count || 0,
+                    today_revenue: parseInt(rRes[0].total_revenue || 0),
+                    total_revenue: parseInt(aRes[0].all_time_revenue || 0),
+                    avg_rating: parseFloat(aRes[0].avg_rating || 0).toFixed(1)
+                });
             });
-
-        } catch (error) {
-            console.error("Verification error:", error);
-            res.status(500).send('Internal verification error');
-        }
-    });
-});
-//******************** Admin ***********************
-//get all products
-app.get('/admin/products', function(req, res) {
-    const sql = "SELECT * FROM product";
-    con.query(sql, function(err, results) {
-        if(err) {
-            res.status(500).send('Server error');
-        } else {
-            res.status(200).json(results);
-        }
+        });
     });
 });
 
-//********************** User************************
-
-// ================= Page Routes ===================
-//add stock page
-app.get('/add/stock', function(req, res) {
-    res.status(200).sendFile(path.join(__dirname, 'views/admin/stock.html'));
+app.get('/admin/payments', (req, res) => {
+    con.query("SELECT payment_id, amount FROM payment", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
 });
 
-app.listen(3000, function() {
-    console.log('Server is running at 3000');
+// 🌟 จัดการเมนู 🌟
+
+// 💡 [เพิ่มใหม่] API ดึงข้อมูล Top 3 เมนูขายดี (สำหรับหน้า Dashboard)
+app.get('/admin/top-menus', (req, res) => {
+    const sql = `
+        SELECT m.menu_id, m.name, m.image, SUM(oi.quantity) as total_sold
+        FROM order_item oi
+        JOIN menu_item m ON oi.menu_id = m.menu_id
+        GROUP BY m.menu_id, m.name, m.image
+        ORDER BY total_sold DESC
+        LIMIT 3
+    `;
+    con.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+app.get('/admin/menus-list', (req, res) => {
+    const sql = "SELECT * FROM menu_item";
+    con.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+app.put('/admin/menu/status/:id', (req, res) => {
+    const { status } = req.body;
+    const sql = "UPDATE menu_item SET status = ? WHERE menu_id = ?";
+    con.query(sql, [status, req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "status updated" });
+    });
+});
+
+app.post('/admin/menu', upload.single('imageFile'), (req, res) => {
+    const { name, price } = req.body;
+    const imagePath = req.file ? `/public/image/${req.file.filename}` : '';
+    const sql = "INSERT INTO menu_item (name, price, status, image) VALUES (?, ?, 'available', ?)";
+    con.query(sql, [name, price, imagePath], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "added" });
+    });
+});
+
+app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
+    const { name, price, status } = req.body; 
+    if (req.file) {
+        const imagePath = `/public/image/${req.file.filename}`;
+        const sql = "UPDATE menu_item SET name = ?, price = ?, status = ?, image = ? WHERE menu_id = ?";
+        con.query(sql, [name, price, status || 'available', imagePath, req.params.id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(200).json({ message: "updated with image" });
+        });
+    } else {
+        const sql = "UPDATE menu_item SET name = ?, price = ?, status = ? WHERE menu_id = ?";
+        con.query(sql, [name, price, status || 'available', req.params.id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(200).json({ message: "updated without image" });
+        });
+    }
+});
+
+// 🌟 จัดการ Cook 🌟
+app.get('/admin/cooks', (req, res) => {
+    con.query("SELECT cook_id, status, password FROM cook", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+app.post('/admin/cook', (req, res) => {
+    const { cook_id } = req.body;
+    const sql = "INSERT INTO cook (cook_id, password, role, status) VALUES (?, '', 'cook', 'inactive')";
+    
+    con.query(sql, [cook_id], (err, result) => {
+        if (err) {
+            if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: "มี Cook ID นี้ในระบบแล้ว" });
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(200).json({ message: "added" });
+    });
+});
+
+app.put('/admin/cook/:id', (req, res) => {
+    const { status } = req.body; 
+    con.query("UPDATE cook SET status = ? WHERE cook_id = ?", [status, req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "updated" }); 
+    });
 });
 
 // #####################################################################################
-// (CUSTOMER)
+// 🍽️ (CUSTOMER) - ระบบลูกค้า
 // #####################################################################################
-// ================= Page Routes (Customer) ===================
+
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/login_table.html')));
 app.get('/menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/menu.html')));
 app.get('/cart', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/cart.html')));
 app.get('/status', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/status.html')));
 app.get('/history', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/history.html')));
-app.get('/payment', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/payment.html')));
-app.get('/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/review.html')));
+app.get('/customer/payment', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/payment.html')));
+app.get('/customer/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/review.html')));
 
-// หน้าแรก (กรอกเลขโต๊ะ)
-app.get('/', function(req, res) {
-    res.sendFile(path.join(__dirname, 'views/customer/login_table.html'));
-});
-// ================= API Routes (Customer) ===================
-
-// 1. สร้าง Session เมื่อเลือกโต๊ะ (ตรวจสอบชื่อคอลัมน์ status ให้ตรงกับ enum ใน SQL)
 app.post('/customer/table', (req, res) => {
     const { table_id } = req.body;
-    // ใน SQL ใช้ชื่อตาราง customer_session และมีคอลัมน์ status
     const sql = "INSERT INTO customer_session (table_id, status, login_time) VALUES (?, 'active', NOW())";
     con.query(sql, [table_id], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -111,7 +214,6 @@ app.post('/customer/table', (req, res) => {
     });
 });
 
-// 2. ดึงรายการเมนู
 app.get('/customer/menu', (req, res) => {
     const sql = "SELECT * FROM menu_item WHERE status = 'available'";
     con.query(sql, (err, results) => {
@@ -120,51 +222,33 @@ app.get('/customer/menu', (req, res) => {
     });
 });
 
-// 3. บันทึกออเดอร์จากตะกร้า
 app.post('/customer/order', (req, res) => {
-    // ตรวจสอบชื่อคอลัมน์: ถ้าใน DB เป็น session_id ให้เปลี่ยนจาก customer_id เป็น session_id นะครับ
-    const { customer_id, items } = req.body; 
+    const customerId = req.body.customer_id || req.body.session_id; 
+    const items = req.body.items;
 
-    if (!items || items.length === 0) {
-        return res.status(400).json({ error: "No items in basket" });
-    }
+    if (!items || items.length === 0) return res.status(400).json({ error: "ไม่มีอาหารในตะกร้า" });
+    if (!customerId) return res.status(400).json({ error: "ไม่พบข้อมูลโต๊ะ กรุณากลับไปหน้าแรกเพื่อเข้าโต๊ะใหม่ครับ" });
 
     const sqlOrder = "INSERT INTO order_table (customer_id, status) VALUES (?, 'pending')";
-    
-    con.query(sqlOrder, [customer_id], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+    con.query(sqlOrder, [customerId], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message }); 
         
-        const orderId = result.insertId; // ดึง ID ของ Order ที่เพิ่งสร้าง
-        
-        // เตรียมข้อมูลสำหรับ Bulk Insert เข้า order_item
+        const orderId = result.insertId; 
         const itemValues = items.map(item => [
-            orderId, 
-            item.menu_id, 
-            item.qty || item.quantity, 
-            item.detail || '', 
-            item.extra || '', 
-            item.extra_price || 0
+            orderId, item.menu_id || item.id, item.qty || item.quantity || 1, item.detail || '-', '', 0, customerId 
         ]);
         
-        const sqlItems = "INSERT INTO order_item (order_id, menu_id, quantity, detail, extra, extra_price) VALUES ?";
-        
-        con.query(sqlItems, [itemValues], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-
-            // --- ส่วนที่แก้ไข: ส่ง Response กลับตามโครงสร้างที่คุณต้องการ ---
-            res.status(200).json({ 
-                order_id: orderId, 
-                status: "pending" 
-            });
+        const sqlItems = "INSERT INTO order_item (order_id, menu_id, quantity, detail, extra, extra_price, customer_id) VALUES ?";
+        con.query(sqlItems, [itemValues], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.status(200).json({ order_id: orderId, status: "pending" });
         });
     });
 });
 
-// 4. ดูสถานะออเดอร์ (อ้างอิงชื่อคอลัมน์จาก order_table และ menu_item)
 app.get('/customer/status/:customerId', (req, res) => {
     const sql = `SELECT ot.status as order_status, mi.name, oi.detail, oi.quantity 
-                 FROM order_table ot 
-                 JOIN order_item oi ON ot.order_id = oi.order_id 
+                 FROM order_table ot JOIN order_item oi ON ot.order_id = oi.order_id 
                  JOIN menu_item mi ON oi.menu_id = mi.menu_id 
                  WHERE ot.customer_id = ? ORDER BY ot.order_id DESC`;
     con.query(sql, [req.params.customerId], (err, results) => {
@@ -173,47 +257,23 @@ app.get('/customer/status/:customerId', (req, res) => {
     });
 });
 
-// 5. แจ้งชำระเงิน (สร้างรายการ Payment)
 app.post('/customer/payment', (req, res) => {
-    // 1. รับค่า customer_id แทน session_id
     const { order_id, amount, customer_id } = req.body;
+    if (!order_id || !customer_id) return res.status(400).json({ error: "Missing order_id or customer_id" });
 
-    // ตรวจสอบค่าที่ส่งมา
-    if (!order_id || !customer_id) {
-        return res.status(400).json({ error: "Missing order_id or customer_id" });
-    }
-
-    // 2. บันทึกข้อมูลลงตาราง payment (ใช้โครงสร้างตามรูป phpMyAdmin ของคุณ)
-    const sqlPayment = "INSERT INTO payment (order_id, amount, payment_time) VALUES (?, ?, NOW())";
-    
+    const sqlPayment = "INSERT INTO payment (order_id, amount, payment_date) VALUES (?, ?, NOW())";
     con.query(sqlPayment, [order_id, amount], (err, result) => {
-        if (err) {
-            console.error("Payment Error:", err);
-            return res.status(500).json({ error: err.message });
-        }
-
-        // 3. อัปเดตสถานะในตาราง customer_session (หรือตารางที่คุณใช้เก็บสถานะลูกค้า)
-        // เปลี่ยน WHERE เป็น customer_id ตามที่คุณต้องการ
+        if (err) return res.status(500).json({ error: err.message });
         const sqlUpdateStatus = "UPDATE customer_session SET status = 'pending_payment' WHERE customer_id = ?";
-        
         con.query(sqlUpdateStatus, [customer_id], (errUpdate) => {
-            if (errUpdate) {
-                console.error("Update Status Error:", errUpdate);
-                return res.status(500).json({ error: errUpdate.message });
-            }
-            
-            res.status(200).json({ 
-                message: 'Payment Recorded', 
-                payment_id: result.insertId 
-            });
+            if (errUpdate) return res.status(500).json({ error: errUpdate.message });
+            res.status(200).json({ message: 'Payment Recorded', payment_id: result.insertId });
         });
     });
 });
 
-// 6. บันทึกรีวิว (ใน SQL ใช้ชื่อคอลัมน์ review_time ซึ่งจะ Gen อัตโนมัติ ไม่ต้องใส่ใน Insert)
 app.post('/customer/review', (req, res) => {
     const { order_id, rating, comment } = req.body;
-    // ตาราง review มี review_id (AI), order_id, rating, comment, review_time (Current_Timestamp)
     const sql = "INSERT INTO review (order_id, rating, comment) VALUES (?, ?, ?)";
     con.query(sql, [order_id, rating, comment], (err) => {
         if (err) return res.status(500).json(err);
@@ -221,13 +281,9 @@ app.post('/customer/review', (req, res) => {
     });
 });
 
-
-// 7. ดึงประวัติการสั่งซื้อ (เปลี่ยนจาก created_at เป็น order_time ตาม SQL)
 app.get('/customer/history/:customerId', (req, res) => {
-    const sql = `SELECT ot.order_id, ot.order_time, 
-                 SUM(oi.quantity * (mi.price + oi.extra_price)) as total_price
-                 FROM order_table ot
-                 JOIN order_item oi ON ot.order_id = oi.order_id
+    const sql = `SELECT ot.order_id, ot.order_time, SUM(oi.quantity * (mi.price + oi.extra_price)) as total_price
+                 FROM order_table ot JOIN order_item oi ON ot.order_id = oi.order_id
                  JOIN menu_item mi ON oi.menu_id = mi.menu_id
                  WHERE ot.customer_id = ? GROUP BY ot.order_id`;
     con.query(sql, [req.params.customerId], (err, results) => {
@@ -236,171 +292,129 @@ app.get('/customer/history/:customerId', (req, res) => {
     });
 });
 
-
-
 // #####################################################################################
-// (COOK)
+// 👨‍🍳 (COOK) - ระบบห้องครัว
 // #####################################################################################
 
+app.get("/cook/login", (req, res) => {
+    res.sendFile(path.join(__dirname, "viewe/Cook/Cook.html"));
+});
 
-
-
-
-
-
-
-// #####################################################################################
-// (ADMIN) - จัดการหลังบ้าน
-// #####################################################################################
-
-// =================================================================
-// Page Routes Admin
-// =================================================================
-app.get('/admin/page/login', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/login.html')));
-app.get('/admin/page/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/dashboard.html')));
-app.get('/admin/page/welcome', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/welcome.html')));
-app.get('/admin/page/menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/menu_management.html')));
-app.get('/admin/page/edit-menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/edit_menu.html')));
-app.get('/admin/page/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/review.html')));
-
-
-// 1. สร้าง Admin ใหม่ (ยิงเพื่อเทสเอาข้อมูลเข้า MySQL)
-app.post('/admin/register', async (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).send('Please provide username and password');
-    }
+app.post("/cook/register", async (req, res) => {
+    const { cook_id, password } = req.body;
+    if (!cook_id || !password) return res.status(400).json({ message: "Missing data" });
 
     try {
-        const hashPassword = await argon2.hash(password);
-        const sql = "INSERT INTO admin (username, password, role) VALUES (?, ?, 'admin')";
+        const hashedPassword = await bcrypt.hash(password, 10);
         
-        con.query(sql, [username, hashPassword], (err, result) => {
-            if (err) {
-                console.error("Insert DB Error:", err);
-                return res.status(500).json({ error: "Failed to create admin. Username might already exist." });
+        con.query("SELECT * FROM cook WHERE cook_id = ?", [cook_id], (err, results) => {
+            if (err) return res.status(500).json({ message: err.message });
+            
+            if (results.length === 0) {
+                return res.status(400).json({ message: "ไม่พบ Cook ID นี้ กรุณาติดต่อ Admin" });
             }
-            res.status(201).json({ 
-                message: 'Admin created successfully! เช็คใน MySQL ได้เลย', 
-                username: username 
+            if (results[0].password !== '') {
+                return res.status(400).json({ message: "Cook ID นี้ถูกลงทะเบียนไปแล้ว" });
+            }
+
+            const updateSql = "UPDATE cook SET password = ?, status = 'active' WHERE cook_id = ?";
+            con.query(updateSql, [hashedPassword, cook_id], (err2, result) => {
+                if (err2) return res.status(500).json({ message: err2.message });
+                res.status(200).json({ message: "registered" });
             });
         });
-    } catch (error) {
-        console.error("Hashing error:", error);
-        res.status(500).send('Error encrypting password');
-    }
+    } catch (error) { res.status(500).json({ message: "Server error" }); }
 });
 
-// 2. ระบบ Login ของ Admin
-app.post('/admin/login', (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).send('Please provide username and password');
-    }
-
-    const sql = "SELECT * FROM admin WHERE username = ?";
+app.post("/cook/login", (req, res) => {
+    const { cook_id, password } = req.body;
+    const sql = "SELECT * FROM cook WHERE cook_id = ?";
     
-    con.query(sql, [username], async (err, results) => {
-        if (err) return res.status(500).send('Database error');
+    con.query(sql, [cook_id], async (err, result) => {
+        if (err) return res.status(500).json({ message: err.message });
         
-        if (results.length === 0) {
-            return res.status(401).send('Wrong username');
-        }
-
-        try {
-            const isMatch = await argon2.verify(results[0].password, password);
-
-            if (!isMatch) {
-                return res.status(401).send('Wrong password');
+        if (result.length > 0) {
+            if(result[0].status === 'inactive' || result[0].status === 'disable') {
+                return res.status(403).json({ message: "รหัสนี้ถูกระงับการใช้งาน กรุณาติดต่อ Admin" });
             }
 
-            const mockToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_token_for_test";
-
-            res.status(200).json({
-                token: mockToken
-            });
-
-        } catch (error) {
-            console.error("Verification error:", error);
-            res.status(500).send('Internal verification error');
-        }
+            const isMatch = await bcrypt.compare(password, result[0].password);
+            if (isMatch) {
+                const token = jwt.sign({ cook_id: cook_id }, JWT_SECRET, { expiresIn: '1d' });
+                res.status(200).json({ token: token });
+            } else { res.status(401).json({ message: "Invalid credentials" }); }
+        } else { res.status(401).json({ message: "Invalid credentials" }); }
     });
 });
 
-
-
-// 3. ดูรายชื่อกุ๊กทั้งหมด
-app.get('/admin/cooks', (req, res) => {
-    con.query("SELECT cook_id, status FROM cook", (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json(results);
+app.get("/cook/orders", (req, res) => {
+    const sql = `
+        SELECT o.order_id, cs.table_id AS table_no, o.status, o.order_time, m.name AS menu_name, oi.quantity, oi.detail AS note 
+        FROM order_table o 
+        LEFT JOIN customer_session cs ON o.customer_id = cs.customer_id
+        LEFT JOIN order_item oi ON o.order_id = oi.order_id 
+        LEFT JOIN menu_item m ON oi.menu_id = m.menu_id
+        WHERE o.status IN ('pending', 'cooking') 
+        ORDER BY o.order_time ASC
+    `;
+    con.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ message: err.message });
+        const ordersMap = {};
+        results.forEach(row => {
+            const oid = row.order_id;
+            if (!ordersMap[oid]) {
+                ordersMap[oid] = { order_id: oid, table_no: row.table_no || "?", status: row.status, order_time: row.order_time, items: [] };
+            }
+            if (row.menu_name) {
+                let noteText = `x${row.quantity}${row.note ? ` (${row.note})` : ''}`;
+                ordersMap[oid].items.push({ name: row.menu_name, note: noteText });
+            }
+        });
+        res.status(200).json(Object.values(ordersMap));
     });
 });
 
-// 4. เปิด/ปิดการใช้งานกุ๊ก (Enable/Disable)
-app.put('/admin/cook/:id', (req, res) => {
-    const cookId = req.params.id;
-    const { status } = req.body; 
-
-    const sql = "UPDATE cook SET status = ? WHERE cook_id = ?";
-    con.query(sql, [status, cookId], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "updated" }); 
-    });
-});
-
-// 5. เพิ่มเมนูอาหารใหม่
-app.post('/admin/menu', (req, res) => {
-    const { name, price } = req.body;
-    
-    const sql = "INSERT INTO menu_item (name, price, status) VALUES (?, ?, 'available')";
-    con.query(sql, [name, price], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "added" });
-    });
-});
-
-// 6. แก้ไขหรือระงับเมนูอาหาร
-app.put('/admin/menu/:id', (req, res) => {
-    const menuId = req.params.id;
-    const { name, status } = req.body; 
-
-    const sql = "UPDATE menu_item SET name = ?, status = ? WHERE menu_id = ?";
-    con.query(sql, [name, status, menuId], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.put("/cook/order/:id", (req, res) => {
+    const order_id = req.params.id;
+    const { status, cook_id } = req.body;
+    if (!status) return res.status(400).json({ message: "Missing status" });
+    let sql = cook_id ? "UPDATE order_table SET status = ?, cook_id = ? WHERE order_id = ?" : "UPDATE order_table SET status = ? WHERE order_id = ?";
+    let params = cook_id ? [status, cook_id, order_id] : [status, order_id];
+    con.query(sql, params, (err, result) => {
+        if (err) return res.status(500).json({ message: err.message });
         res.status(200).json({ message: "updated" });
     });
 });
 
-// 7. ดูรายการชำระเงินทั้งหมด (เส้นนี้แหละที่นายเทสเมื่อกี้!)
-app.get('/admin/payments', (req, res) => {
-    con.query("SELECT payment_id, amount FROM payment", (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json(results);
-    });
-});
+app.get("/cook/dashboard", (req, res) => {
+    const countSql = `SELECT SUM(oi.quantity) as served_count FROM order_item oi JOIN order_table o ON o.order_id = oi.order_id WHERE o.status = 'served' AND DATE(o.order_time) = CURDATE()`;
+    const topMenuSql = `SELECT m.name as menu_name, SUM(oi.quantity) as cnt FROM order_item oi JOIN order_table o ON o.order_id = oi.order_id JOIN menu_item m ON oi.menu_id = m.menu_id WHERE o.status = 'served' AND DATE(o.order_time) = CURDATE() GROUP BY m.name ORDER BY cnt DESC LIMIT 3`;
 
-// 8. ดูสถิติรวม Dashboard
-app.get('/admin/dashboard', (req, res) => {
-    const sql = `
-        SELECT 
-            (SELECT SUM(amount) FROM payment) as total_revenue,
-            (SELECT AVG(rating) FROM review) as avg_rating
-    `;
-    
-    con.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        
-        const revenue = results[0].total_revenue || 0;
-        const rating = results[0].avg_rating || 0;
-
-        res.status(200).json({ 
-            total_revenue: parseInt(revenue), 
-            avg_rating: parseFloat(rating).toFixed(1) 
+    con.query(countSql, (err1, countRes) => {
+        if (err1) return res.status(500).json({ message: "Count Error: " + err1.message });
+        con.query(topMenuSql, (err2, topRes) => {
+            if (err2) return res.status(500).json({ message: "TopMenu Error: " + err2.message });
+            res.status(200).json({ served_count: countRes[0]?.served_count || 0, top_menus: topRes });
         });
     });
 });
 
+app.get("/api/get_reviews.php", (req, res) => {
+    const summarySql = `SELECT IFNULL(AVG(rating), 0) as average, COUNT(*) as total FROM review`;
+    const reviewsSql = `SELECT r.rating, r.comment, r.review_time as createdAt, o.customer_id as tableNo FROM review r LEFT JOIN order_table o ON r.order_id = o.order_id ORDER BY r.review_time DESC`;
 
+    con.query(summarySql, (err1, summaryRes) => {
+        if (err1) return res.status(500).json({ success: false, message: err1.message });
+        con.query(reviewsSql, (err2, reviewsRes) => {
+            if (err2) return res.status(500).json({ success: false, message: err2.message });
+            res.json({ success: true, summary: { average: parseFloat(summaryRes[0].average).toFixed(1), total: summaryRes[0].total }, reviews: reviewsRes });
+        });
+    });
+});
+
+// ==========================================
+// สั่งรันเซิร์ฟเวอร์
+// ==========================================
+app.listen(3000, () => {
+    console.log('✅ Server is running at http://localhost:3000');
+});

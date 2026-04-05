@@ -2,47 +2,140 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>Order Status</title>
 </head>
-<body class="bg-gray-50 min-h-screen pb-24">
-    <div class="bg-white p-8 shadow-sm sticky top-0 text-center rounded-b-[3rem]">
-        <h2 class="text-3xl font-bold mb-6 text-gray-800">Your Orders</h2>
-        <div class="flex justify-center gap-6 text-sm font-semibold">
-            <span class="flex items-center gap-2"><span class="w-4 h-4 bg-yellow-400 rounded-full"></span> Pending</span>
-            <span class="flex items-center gap-2"><span class="w-4 h-4 bg-blue-500 rounded-full"></span> Cooking</span>
-            <span class="flex items-center gap-2"><span class="w-4 h-4 bg-green-500 rounded-full"></span> Served</span>
+<body class="bg-gray-50 flex flex-col min-h-screen pb-28 font-sans text-gray-800">
+
+    <div class="bg-white rounded-b-[2rem] shadow-sm pt-6 pb-8 px-6 relative mb-6">
+        
+        <button onclick="window.location.href='/menu'" class="absolute left-6 top-6 text-gray-400 hover:text-orange-500 flex items-center gap-1 font-bold transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+            </svg>
+            กลับ
+        </button>
+
+        <h1 class="text-3xl font-black text-center text-[#1e293b] mt-1">Your Orders</h1>
+        
+        <div class="flex justify-center gap-6 mt-4 text-sm font-bold text-black">
+            <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-yellow-400 shadow-sm"></span> Pending</div>
+            <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-blue-500 shadow-sm"></span> Cooking</div>
+            <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-green-500 shadow-sm"></span> Served</div>
         </div>
     </div>
 
-    <div id="statusList" class="p-6 space-y-5 max-w-xl mx-auto">
+    <div class="w-full max-w-2xl mx-auto px-6 space-y-4" id="order-container">
+        
+        <div class="bg-white rounded-2xl p-5 flex justify-between items-center shadow-sm border-l-[6px] border-yellow-400">
+            <div>
+                <h3 class="font-bold text-xl text-gray-800">ผัดคะน้าหมูกรอบ</h3>
+                <p class="text-gray-400 text-sm mt-1">Note: -</p>
+            </div>
+            <div class="text-right">
+                <div class="text-gray-300 text-xs font-black tracking-widest uppercase mb-1">Pending</div>
+                <div class="text-orange-500 font-black text-2xl">x1</div>
+            </div>
         </div>
 
-    <script>
-        async function loadStatus() {
-            const sid = localStorage.getItem('sessionId');
-            const res = await fetch(`/customer/order-status/${sid}`);
-            const data = await res.json();
-            
-            const colors = { 'pending': 'border-yellow-400', 'cooking': 'border-blue-500', 'served': 'border-green-500' };
+        </div>
 
-            document.getElementById('statusList').innerHTML = data.map(item => `
-                <div class="bg-white rounded-[1.5rem] p-6 shadow-lg border-l-[10px] ${colors[item.order_status] || 'border-gray-200'} transition-all">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h4 class="text-xl font-bold text-gray-800">${item.name}</h4>
-                            <p class="text-gray-400 italic text-sm mt-1">Note: ${item.detail || '-'}</p>
+    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-5 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] z-50">
+        <div class="w-full max-w-2xl mx-auto">
+            <div class="flex justify-between items-end mb-4 px-2">
+                <span class="text-gray-500 font-bold text-lg">ยอดรวมทั้งหมด:</span>
+                <span class="text-[#ea580c] font-black text-3xl" id="total-amount-display">40฿</span>
+            </div>
+            
+            <button onclick="goToPayment()" class="w-full bg-[#ea580c] hover:bg-orange-700 text-white font-bold py-4 rounded-xl text-xl shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]">
+                ชำระเงิน (Check Bill)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ดึงรหัสลูกค้าจากที่เคยบันทึกไว้ตอนเข้าโต๊ะ
+        const customerId = localStorage.getItem('customerId');
+        let currentTotal = 0; 
+        let currentOrderId = 0; 
+
+        async function loadOrderData() {
+            if (!customerId) return;
+
+            try {
+                // 1. ดึงข้อมูลสถานะอาหาร (ที่แก้จากหลังบ้านแล้ว)
+                const resStatus = await fetch(`/customer/status/${customerId}`);
+                const statusData = await resStatus.json();
+                
+                const container = document.getElementById('order-container');
+                container.innerHTML = ''; // ล้างข้อมูลจำลอง (ตัวหลอก) ทิ้งไป
+
+                statusData.forEach(item => {
+                    // กำหนดสีและข้อความให้ตรงกับสถานะจากฐานข้อมูล
+                    let borderColor = 'border-yellow-400';
+                    let textColor = 'text-yellow-500';
+                    let statusText = 'Pending';
+
+                    if (item.order_status === 'cooking') {
+                        borderColor = 'border-blue-500';
+                        textColor = 'text-blue-500';
+                        statusText = 'Cooking';
+                    } else if (item.order_status === 'served') {
+                        borderColor = 'border-green-500';
+                        textColor = 'text-green-500';
+                        statusText = 'Served';
+                    }
+
+                    // สร้างการ์ดรายการอาหารของจริงใส่ลงไป
+                    container.innerHTML += `
+                        <div class="bg-white rounded-2xl p-5 flex justify-between items-center shadow-sm border-l-[6px] ${borderColor}">
+                            <div>
+                                <h3 class="font-bold text-xl text-gray-800">${item.name}</h3>
+                                <p class="text-gray-400 text-sm mt-1">Note: ${item.detail || '-'}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="${textColor} text-xs font-black tracking-widest uppercase mb-1">${statusText}</div>
+                                <div class="text-orange-500 font-black text-2xl">x${item.quantity}</div>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <span class="block text-xs font-black text-gray-300 uppercase tracking-widest">${item.order_status}</span>
-                            <span class="text-2xl font-bold text-orange-500">x${item.quantity}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                    `;
+                });
+
+                // 2. ดึงข้อมูลยอดเงินรวมและรหัสออเดอร์ จากประวัติ
+                const resHistory = await fetch(`/customer/history/${customerId}`);
+                const historyData = await resHistory.json();
+                
+                if (historyData.length > 0) {
+                    // เอาออเดอร์ล่าสุดไว้สำหรับส่งไปหน้าจ่ายเงิน
+                    currentOrderId = historyData[0].order_id;
+                    
+                    // คำนวณยอดเงินรวมทั้งหมดของโต๊ะนี้
+                    currentTotal = historyData.reduce((sum, order) => sum + Number(order.total_price), 0);
+                    document.getElementById('total-amount-display').innerText = currentTotal + '฿';
+                }
+
+            } catch (error) {
+                console.error("Error loading status:", error);
+            }
         }
-        loadStatus();
-        setInterval(loadStatus, 5000);
+
+        // โหลดข้อมูลทันทีที่เปิดหน้าเว็บ
+        loadOrderData();
+
+        // 💡 ทริคพิเศษ: สั่งให้หน้านี้ดึงข้อมูลใหม่ทุกๆ 3 วินาที (Real-time)
+        setInterval(loadOrderData, 3000);
+
+        // ฟังก์ชันเมื่อกดปุ่ม "ชำระเงิน"
+        function goToPayment() {
+            if(currentOrderId === 0) {
+                Swal.fire('ไม่มีรายการ', 'ไม่พบรายการอาหารที่ต้องชำระเงิน', 'warning');
+                return;
+            }
+            // พาไปหน้า Payment พร้อมส่งยอดเงินและเลข Order ของจริงไป
+            window.location.href = `/customer/payment?total=${currentTotal}&id=${currentOrderId}`;
+        }
     </script>
 </body>
 </html>

@@ -10,7 +10,7 @@
         /* CSS เพิ่มเติมสำหรับตั้งค่าพื้นหลัง */
         body {
             /* สำคัญ: เปลี่ยน 'your-uploaded-image.jpg' เป็นชื่อไฟล์รูปภาพจริงของคุณ 
-              และตรวจสอบให้แน่ใจว่า Express เสิร์ฟไฟล์นี้ได้ (เช่น อยู่ในโฟลเดอร์ public)
+               และตรวจสอบให้แน่ใจว่า Express เสิร์ฟไฟล์นี้ได้ (เช่น อยู่ในโฟลเดอร์ public)
             */
             background-image: url('/public/image/BG.png');
             background-size: cover; /* ปรับรูปให้คลุมเต็มหน้าจอ */
@@ -37,7 +37,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
                 </svg>
             </span>
-            <input type="number" id="tableId" 
+            <input type="number" id="tableId" min="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57"
                 class="w-full pl-20 pr-6 py-5 border-2 border-orange-300 rounded-2xl text-3xl text-center font-bold focus:outline-none focus:ring-4 focus:ring-orange-200 transition-all placeholder:text-gray-300 placeholder:font-normal" 
                 placeholder="Ex. 1">
         </div>
@@ -49,29 +49,38 @@
     </div>
 
     <script>
-        // ฟังก์ชันเริ่มสั่งอาหาร (เหมือนเดิม)
+        // ไม้ตายลับ: ล้างข้อมูลโต๊ะเก่าทิ้งทุกครั้งที่เปิดหน้าเว็บนี้!
+        localStorage.clear();
+
         async function startOrder() {
             const tableId = document.getElementById('tableId').value;
-            if(!tableId) return Swal.fire({ 
-                icon: 'warning', 
-                title: 'กรุณากรอกเลขโต๊ะ', 
-                confirmButtonColor: '#f39c12',
-                customClass: { popup: 'rounded-3xl' }
-            });
+            
+            // 💡 ดักจับ 2 กรณี: 1. ไม่ได้กรอกเลข 2. กรอกเลข 0 หรือน้อยกว่า
+            if(!tableId || parseInt(tableId) <= 0) {
+                return Swal.fire({ 
+                    icon: 'warning', 
+                    title: 'กรุณากรอกเลขโต๊ะที่ถูกต้อง', 
+                    text: 'หมายเลขโต๊ะต้องเป็น 1 ขึ้นไปครับ',
+                    confirmButtonColor: '#f39c12',
+                    customClass: { popup: 'rounded-3xl' }
+                });
+            }
 
             try {
-                const res = await fetch('/customer/session', {
+                const res = await fetch('/customer/table', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ table_id: tableId })
                 });
                 const data = await res.json();
-                if(data.sessionId) {
-                    localStorage.setItem('sessionId', data.sessionId);
+                
+                if(data.customerId) {
+                    // สร้างข้อมูลโต๊ะใหม่ที่ถูกต้องลงในเครื่อง
+                    localStorage.setItem('customerId', data.customerId); 
                     localStorage.setItem('tableNumber', tableId);
                     window.location.href = '/menu';
                 } else {
-                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง Session ได้', 'error');
+                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเปิดโต๊ะได้', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
