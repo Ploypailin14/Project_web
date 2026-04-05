@@ -60,20 +60,32 @@
         const customerId = localStorage.getItem('customerId');
         let currentTotal = 0; 
         let currentOrderId = 0; 
+        let canPay = false; // 💡 ตัวแปรใหม่: เอาไว้เช็คว่าอาหารเสิร์ฟครบหรือยัง
 
         async function loadOrderData() {
             if (!customerId) return;
 
             try {
-                // 1. ดึงข้อมูลสถานะอาหาร (ที่แก้จากหลังบ้านแล้ว)
                 const resStatus = await fetch(`/customer/status/${customerId}`);
                 const statusData = await resStatus.json();
                 
                 const container = document.getElementById('order-container');
-                container.innerHTML = ''; // ล้างข้อมูลจำลอง (ตัวหลอก) ทิ้งไป
+                container.innerHTML = ''; 
+                
+                let sum = 0; 
+                let allServed = true; // 💡 สมมติไว้ก่อนว่าเสิร์ฟครบแล้ว
+                let hasItem = false;
 
                 statusData.forEach(item => {
-                    // กำหนดสีและข้อความให้ตรงกับสถานะจากฐานข้อมูล
+                    hasItem = true;
+                    sum += (Number(item.price || 0) * Number(item.quantity || 1));
+
+                    // 💡 ด่านตรวจ: ถ้าเจอจานไหนยังไม่ Served ให้เปลี่ยนเป็น false ทันที
+                    if (item.order_status === 'pending' || item.order_status === 'cooking') {
+                        allServed = false;
+                    }
+
+                    // กำหนดสีและข้อความให้ตรงกับสถานะ
                     let borderColor = 'border-yellow-400';
                     let textColor = 'text-yellow-500';
                     let statusText = 'Pending';
@@ -88,7 +100,7 @@
                         statusText = 'Served';
                     }
 
-                    // สร้างการ์ดรายการอาหารของจริงใส่ลงไป
+                    // สร้างการ์ดรายการอาหาร
                     container.innerHTML += `
                         <div class="bg-white rounded-2xl p-5 flex justify-between items-center shadow-sm border-l-[6px] ${borderColor}">
                             <div>
@@ -103,17 +115,18 @@
                     `;
                 });
 
-                // 2. ดึงข้อมูลยอดเงินรวมและรหัสออเดอร์ จากประวัติ
+                // อัปเดตยอดรวม
+                currentTotal = sum;
+                document.getElementById('total-amount-display').innerText = currentTotal + '฿';
+
+                // 💡 สรุปผล: จะจ่ายเงินได้ ก็ต่อเมื่อมีของสั่ง และของทุกชิ้นเสิร์ฟครบแล้วเท่านั้น
+                canPay = (hasItem && allServed);
+
+                // ดึงข้อมูลรหัสออเดอร์
                 const resHistory = await fetch(`/customer/history/${customerId}`);
                 const historyData = await resHistory.json();
-                
                 if (historyData.length > 0) {
-                    // เอาออเดอร์ล่าสุดไว้สำหรับส่งไปหน้าจ่ายเงิน
                     currentOrderId = historyData[0].order_id;
-                    
-                    // คำนวณยอดเงินรวมทั้งหมดของโต๊ะนี้
-                    currentTotal = historyData.reduce((sum, order) => sum + Number(order.total_price), 0);
-                    document.getElementById('total-amount-display').innerText = currentTotal + '฿';
                 }
 
             } catch (error) {
@@ -124,16 +137,28 @@
         // โหลดข้อมูลทันทีที่เปิดหน้าเว็บ
         loadOrderData();
 
-        // 💡 ทริคพิเศษ: สั่งให้หน้านี้ดึงข้อมูลใหม่ทุกๆ 3 วินาที (Real-time)
+        // ดึงข้อมูลใหม่ทุกๆ 3 วินาที (Real-time)
         setInterval(loadOrderData, 3000);
 
         // ฟังก์ชันเมื่อกดปุ่ม "ชำระเงิน"
         function goToPayment() {
-            if(currentOrderId === 0) {
+            if(currentOrderId === 0 || currentTotal === 0) {
                 Swal.fire('ไม่มีรายการ', 'ไม่พบรายการอาหารที่ต้องชำระเงิน', 'warning');
                 return;
             }
-            // พาไปหน้า Payment พร้อมส่งยอดเงินและเลข Order ของจริงไป
+
+            // 💡 ดักจับตรงนี้! ถ้าพยายามกดจ่ายเงินตอนของยังไม่ครบ
+            if(!canPay) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'รออาหารสักครู่นะครับ',
+                    text: 'ต้องรอให้พ่อครัวทำอาหารและเสิร์ฟให้ครบทุกจานก่อน ถึงจะเช็คบิลได้ครับ 👨‍🍳',
+                    confirmButtonColor: '#ea580c'
+                });
+                return;
+            }
+
+            // ถ้าทุกอย่าง Served ครบหมดแล้ว ค่อยพาไปหน้าจ่ายเงิน
             window.location.href = `/customer/payment?total=${currentTotal}&id=${currentOrderId}`;
         }
     </script>
