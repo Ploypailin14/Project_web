@@ -15,7 +15,7 @@
         <div id="historyList" class="space-y-6">
             </div>
 
-        <div id="finishAction" class="hidden pt-4">
+        <div id="finishAction" class="hidden pt-4 pb-10">
             <button onclick="finishSession()" 
                     class="w-full bg-[#f39c12] hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 text-xl">
                 Finish
@@ -37,12 +37,20 @@
                     return;
                 }
 
-                // วาดการ์ดออเดอร์ตามดีไซน์ในรูป
+                // วาดการ์ดออเดอร์
                 container.innerHTML = data.map(order => {
                     const dateObj = new Date(order.order_time);
                     const formattedDate = dateObj.toLocaleDateString('en-GB', {
                         day: '2-digit', month: 'short', year: 'numeric'
                     });
+
+                    // 💡 สร้างรายการเมนูย่อยๆ ที่ลูกค้าสั่ง
+                    const itemsListHtml = order.items.map(item => `
+                        <div class="flex justify-between items-center text-gray-600 text-sm mb-2">
+                            <span class="flex-1 pl-2 truncate">- ${item.name}</span>
+                            <span class="font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">x${item.qty}</span>
+                        </div>
+                    `).join('');
 
                     return `
                     <div class="bg-white rounded-[1.5rem] p-6 shadow-2xl relative overflow-hidden">
@@ -55,14 +63,19 @@
                             </div>
                         </div>
 
-                        <div class="space-y-2 mb-6">
-                            <p class="text-gray-500 font-bold uppercase text-xs tracking-widest">Status</p>
+                        <div class="mb-4 bg-gray-50 p-4 rounded-xl">
+                            <p class="text-gray-400 font-bold uppercase text-xs tracking-widest mb-3">Menu</p>
+                            ${itemsListHtml}
+                        </div>
+
+                        <div class="space-y-2 mb-6 px-2">
+                            <p class="text-gray-400 font-bold uppercase text-xs tracking-widest">Status</p>
                             <p class="text-green-600 font-bold">Successfully Served & Paid</p>
                         </div>
 
-                        <div class="border-t border-gray-50 pt-4 space-y-1">
-                            <p class="text-gray-800 font-bold text-lg">Total : ${order.total_price}฿</p>
-                            <p class="text-gray-500 text-sm font-medium">Date : ${formattedDate}</p>
+                        <div class="border-t border-gray-100 pt-4 space-y-1 px-2">
+                            <p class="text-gray-800 font-black text-xl">Total : ${parseFloat(order.total_price).toLocaleString()} ฿</p>
+                            <p class="text-gray-400 text-sm font-medium">Date : ${formattedDate}</p>
                         </div>
                     </div>
                     `;
@@ -85,9 +98,7 @@
                 confirmButtonColor: '#f39c12',
                 confirmButtonText: 'กลับหน้าหลัก'
             }).then(() => {
-                // 💡 ล้าง LocalStorage ทั้งหมดเพื่อให้เครื่องนี้พร้อมรับลูกค้าคนใหม่
                 localStorage.clear();
-                // ส่งกลับไปหน้าเริ่มแรก (หน้าเลือกโต๊ะ)
                 window.location.href = '/';
             });
         }
