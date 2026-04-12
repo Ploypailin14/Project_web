@@ -2,68 +2,111 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>Payment</title>
 </head>
-<body class="bg-gray-50 flex flex-col items-center p-6">
-    <h1 class="text-2xl font-bold my-6">หน้าชำระเงิน</h1>
-    <div class="bg-white w-full max-w-sm p-8 rounded-3xl shadow-lg text-center">
-        <p class="text-gray-500">ยอดเงินรวมทั้งสิ้น</p>
-        <h2 id="finalAmount" class="text-4xl font-black text-orange-600 my-4">0฿</h2>
-        <div class="space-y-3 mt-8 text-left">
-            <p class="font-bold">เลือกวิธีชำระ:</p>
-            <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:bg-orange-50">
-                <input type="radio" name="method" value="Cash" checked class="mr-3"> เงินสดที่เคาน์เตอร์
+<body style="background-image: url('/public/image/BG.png');" class="min-h-screen bg-cover bg-center bg-fixed bg-blend-overlay bg-gradient-to-b from-[#db8b22]/80 to-[#382c21]/90 flex items-center justify-center p-6 font-sans">
+
+    <div class="bg-white w-full max-w-md rounded-[1.5rem] p-8 shadow-2xl relative">
+        
+        <div class="flex justify-between items-end border-b border-gray-200 pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Payment</h1>
+            <div class="text-lg text-gray-600">Total : <span id="display-total" class="font-bold text-gray-800">0</span>฿</div>
+        </div>
+
+        <div class="space-y-2">
+            <label class="flex items-center cursor-pointer border-b border-gray-100 py-4 hover:bg-gray-50 transition rounded-lg px-2">
+                <input type="radio" name="pay_method" value="cash" class="w-5 h-5 text-orange-500 focus:ring-orange-500 cursor-pointer" checked onchange="toggleQR()">
+                <span class="ml-4 text-lg text-gray-700 font-medium">Cash</span>
             </label>
-            <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:bg-orange-50">
-                <input type="radio" name="method" value="PromptPay" class="mr-3"> พร้อมเพย์ / โอนเงิน
+
+            <label class="flex items-center cursor-pointer py-4 border-b border-gray-100 hover:bg-gray-50 transition rounded-lg px-2">
+                <input type="radio" name="pay_method" value="qr" class="w-5 h-5 text-orange-500 focus:ring-orange-500 cursor-pointer" onchange="toggleQR()">
+                <span class="ml-4 text-lg text-gray-700 font-medium">QR Payment</span>
             </label>
         </div>
-        <button onclick="pay()" class="w-full bg-green-500 text-white py-4 rounded-xl mt-8 font-bold text-lg shadow-md">ยืนยันการแจ้งชำระ</button>
-    </div>
-    <script>
-        const amount = new URLSearchParams(window.location.search).get('total');
-        const orderId = new URLSearchParams(window.location.search).get('id') || 0; 
-        
-        document.getElementById('finalAmount').innerText = (amount || 0) + '฿';
-        
-        async function pay() {
-            const method = document.querySelector('input[name="method"]:checked').value;
-            const customerId = localStorage.getItem('customerId') || 1; 
 
+        <div class="mt-8 flex justify-between items-end min-h-[140px]">
+            <button onclick="confirmPayment()" class="bg-[#f39c12] hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 text-lg mb-2">
+                Pay now
+            </button>
+            
+            <div id="qr-box" class="hidden animate-fade-in">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PromptPay-0812345678" alt="QR Code" class="w-32 h-32 border border-gray-300 p-2 rounded-xl shadow-sm">
+            </div>
+        </div>
+
+    </div>
+
+    <style>
+        /* CSS เล็กน้อยเพื่อทำให้ QR Code โผล่มาแบบนุ่มนวล */
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <script>
+        // ดึงข้อมูลจาก URL ตอนเด้งมาจากหน้า Status
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('id');
+        const totalAmount = urlParams.get('total') || 0;
+        
+        // แสดงยอดรวม
+        document.getElementById('display-total').innerText = parseFloat(totalAmount).toLocaleString();
+
+        // ฟังก์ชันเปิด/ปิด QR Code
+        function toggleQR() {
+            const method = document.querySelector('input[name="pay_method"]:checked').value;
+            const qrBox = document.getElementById('qr-box');
+            if(method === 'qr') {
+                qrBox.classList.remove('hidden'); // โชว์ QR
+            } else {
+                qrBox.classList.add('hidden'); // ซ่อน QR
+            }
+        }
+
+        // ฟังก์ชันกดยืนยันการชำระเงิน
+        async function confirmPayment() {
+            const customerId = localStorage.getItem('customerId');
+            
+            // แจ้งเตือน Loading เล็กน้อยเพื่อความสมจริง
+            Swal.fire({
+                title: 'กำลังดำเนินการ...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
             try {
-                // 1. ส่งข้อมูลไปให้หลังบ้านบันทึกลง Database
+                // เรียก API หลังบ้านเพื่อบันทึกว่าจ่ายเงินแล้ว
                 const res = await fetch('/customer/payment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        customer_id: customerId, 
-                        order_id: orderId, 
-                        amount: amount, 
-                        method: method 
-                    })
+                    body: JSON.stringify({ order_id: orderId, amount: totalAmount, customer_id: customerId })
                 });
 
-                const data = await res.json(); // อ่านผลลัพธ์ที่หลังบ้านตอบกลับมา
-
                 if (res.ok) {
-                    // 2. ถ้าบันทึกลงตาราง payment สำเร็จจริงๆ ค่อยให้ผ่าน
                     Swal.fire({
-                        title: 'เรียบร้อย!',
-                        text: 'บันทึกยอดเงินเข้าสู่ระบบแล้ว',
                         icon: 'success',
-                        confirmButtonColor: '#ea580c'
+                        title: 'ชำระเงินสำเร็จ!',
+                        text: 'ขอบคุณที่ใช้บริการครับ',
+                        showConfirmButton: false,
+                        timer: 1500
                     }).then(() => {
+                        // 💡 จ่ายเสร็จ เด้งไปหน้า Review พร้อมส่ง orderId ไปด้วย
                         window.location.href = `/customer/review?id=${orderId}`;
                     });
                 } else {
-                    // 3. ถ้า MySQL เตะออก ให้แสดงสาเหตุที่หน้าจอเลย
-                    Swal.fire('บันทึกไม่สำเร็จ', 'สาเหตุจาก DB: ' + (data.error || 'Unknown Error'), 'error');
-                    console.error("Backend Error Detail:", data);
+                    Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกการชำระเงินได้ กรุณาลองใหม่', 'error');
                 }
             } catch (error) {
-                Swal.fire('เชื่อมต่อล้มเหลว', error.message, 'error');
+                console.error(error);
+                Swal.fire('เชื่อมต่อล้มเหลว', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', 'error');
             }
         }
     </script>
