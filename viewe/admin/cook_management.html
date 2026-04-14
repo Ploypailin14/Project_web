@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +8,16 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
-<body style="background-image: url('/public/image/BG.png');" 
-      class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-4">
 
-    <div class="w-full max-w-4xl bg-white/10 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
-        
+<body style="background-image: url('/public/image/BG.png');"
+    class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-4">
+
+    <div
+        class="w-full max-w-4xl bg-white/10 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
+
         <div class="bg-white/90 px-6 py-4 flex items-center justify-between border-b shrink-0">
-            <button onclick="window.location.href='/admin/page/welcome'" class="text-black font-bold hover:text-orange-600 flex items-center gap-2 cursor-pointer bg-transparent border-none">
+            <button onclick="window.location.href='/admin/page/welcome'"
+                class="text-black font-bold hover:text-orange-600 flex items-center gap-2 cursor-pointer bg-transparent border-none">
                 ◀ Back to Admin
             </button>
             <h2 class="text-xl font-bold text-gray-800">👨‍🍳 Cook Management</h2>
@@ -23,15 +26,17 @@
         <div class="bg-white p-6 shrink-0 shadow-sm z-10 flex gap-4 items-end border-b">
             <div class="flex-1 form-control">
                 <label class="label font-bold text-gray-700">กำหนด Cook ID ใหม่ให้พ่อครัว</label>
-                <input type="text" id="new-cook-id" placeholder="เช่น COOK-01" class="input input-bordered w-full bg-gray-50 border-gray-300 text-black font-bold" />
+                <input type="text" id="new-cook-id" placeholder="เช่น COOK-01"
+                    class="input input-bordered w-full bg-gray-50 border-gray-300 text-black font-bold" />
             </div>
-            <button onclick="generateCook()" class="btn bg-orange-500 hover:bg-orange-600 border-none text-white px-8 text-lg">
+            <button onclick="generateCook()"
+                class="btn bg-orange-500 hover:bg-orange-600 border-none text-white px-8 text-lg">
                 + Generate ID
             </button>
         </div>
 
         <div id="cook-list" class="flex-1 overflow-y-auto p-6 space-y-4">
-            </div>
+        </div>
     </div>
 
     <script>
@@ -41,15 +46,15 @@
                 const res = await fetch('/admin/cooks');
                 const cooks = await res.json();
                 const list = document.getElementById('cook-list');
-                
+
                 if (cooks.length === 0) {
                     list.innerHTML = '<div class="bg-white rounded-lg p-8 text-center text-gray-500 font-bold shadow-md">ยังไม่มีพ่อครัวในระบบ</div>';
                     return;
                 }
-                
+
                 list.innerHTML = cooks.map(cook => {
                     const isActive = (cook.status === 'active');
-                    
+
                     let statusBadge = '';
                     if (isActive) {
                         statusBadge = '<span class="badge badge-success text-white font-bold py-3">กำลังเข้ากะ (Active)</span>';
@@ -59,7 +64,7 @@
 
                     const btnText = isActive ? 'Disable (เลิกงาน)' : 'Active (เข้างาน)';
                     const btnColor = isActive ? 'bg-pink-200 hover:bg-pink-300' : 'bg-green-200 hover:bg-green-300';
-                    
+
                     // 💡 แก้ไขสถานะที่จะส่งไปหลังบ้านให้เป็น inactive ให้ตรงกับ Database
                     const targetStatus = isActive ? 'inactive' : 'active';
 
@@ -78,7 +83,7 @@
                         </button>
                     </div>
                 `}).join('');
-                
+
             } catch (error) {
                 console.error("Error loading cooks:", error);
             }
@@ -98,7 +103,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ cook_id: cookId })
                 });
-                
+
                 const data = await res.json();
 
                 if (res.ok) {
@@ -116,15 +121,25 @@
         // กดปุ่มเปลี่ยนสถานะ Disable / Active
         function toggleCookStatus(cookId, newStatus) {
             const actionText = newStatus === 'active' ? 'ให้พ่อครัวเข้าทำงาน' : 'ให้พ่อครัวเลิกงาน';
-            
+
+            // แก้ในส่วนฟังก์ชัน toggleCookStatus
+            const confirmBtnClass = newStatus === 'active'
+                ? 'btn bg-green-500 hover:bg-green-600 text-white border-none mx-2'
+                : 'btn bg-pink-500 hover:bg-pink-600 text-white border-none mx-2';
+
             Swal.fire({
                 title: 'ยืนยัน',
                 text: `ต้องการ${actionText} ใช่หรือไม่?`,
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: newStatus === 'active' ? '#4ade80' : '#f472b6',
-                cancelButtonColor: '#9ca3af',
-                confirmButtonText: 'ใช่, ตกลง'
+                customClass: {
+                    // 2. นำตัวแปร Class มาใส่ตรงนี้
+                    confirmButton: confirmBtnClass,
+                    cancelButton: 'btn btn-ghost mx-2'
+                },
+                buttonsStyling: false,
+                confirmButtonText: 'ใช่, ตกลง',
+                cancelButtonText: 'ยกเลิก'
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
@@ -133,7 +148,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ status: newStatus })
                         });
-                        
+
                         // 💡 เพิ่มการแจ้งเตือนผลลัพธ์
                         if (res.ok) {
                             Swal.fire({
@@ -159,4 +174,5 @@
         loadCooks();
     </script>
 </body>
+
 </html>
