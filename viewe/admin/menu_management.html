@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,22 +9,26 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body style="background-image: url('/public/image/BG.png');" 
-      class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-4">
 
-    <div class="w-full max-w-4xl bg-white/10 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
-        
+<body style="background-image: url('/public/image/BG.png');"
+    class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-4">
+
+    <div
+        class="w-full max-w-4xl bg-white/10 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
+
         <div class="bg-white/90 px-6 py-4 flex items-center border-b shrink-0">
-            <button onclick="window.location.href='/admin/page/welcome'" id="back-to-admin" class="text-black font-bold hover:text-orange-600 flex items-center gap-2 cursor-pointer bg-transparent border-none">
+            <button onclick="window.location.href='/admin/page/welcome'" id="back-to-admin"
+                class="text-black font-bold hover:text-orange-600 flex items-center gap-2 cursor-pointer bg-transparent border-none">
                 ◀ Menu Management
             </button>
         </div>
 
         <div id="admin-menu-list" class="flex-1 overflow-y-auto p-6 space-y-4">
-            </div>
+        </div>
 
         <div class="p-6 bg-transparent flex justify-center shrink-0">
-            <button onclick="window.location.href='/admin/page/edit-menu'" class="btn bg-zinc-800 hover:bg-black text-white border-none w-full max-w-md text-xl font-bold rounded-lg h-14 shadow-lg transition-transform active:scale-95">
+            <button onclick="window.location.href='/admin/page/edit-menu'"
+                class="btn bg-zinc-800 hover:bg-black text-white border-none w-full max-w-md text-xl font-bold rounded-lg h-14 shadow-lg transition-transform active:scale-95">
                 + Add new menu
             </button>
         </div>
@@ -36,15 +41,15 @@
                 const res = await fetch('/admin/menus-list');
                 const items = await res.json();
                 const list = document.getElementById('admin-menu-list');
-                
+
                 if (items.length === 0) {
                     list.innerHTML = '<div class="bg-white rounded-lg p-8 text-center text-gray-500 font-bold shadow-md">ยังไม่มีเมนูอาหารในระบบ กรุณากดปุ่ม Add new menu</div>';
                     return;
                 }
-                
+
                 list.innerHTML = items.map(item => {
-                    const validImageUrl = (item.image && item.image.trim() !== '') 
-                        ? item.image 
+                    const validImageUrl = (item.image && item.image.trim() !== '')
+                        ? item.image
                         : 'https://placehold.co/200x200/ffedd5/ea580c?text=No+Image';
 
                     // 💡 ระบบเช็คสถานะ: ถ้า available ให้ปุ่มเป็นสีชมพู (ปิด) ถ้า unavailable ให้เป็นสีเขียว (เปิด)
@@ -52,7 +57,7 @@
                     const btnText = isAvailable ? 'Disable' : 'Enable';
                     const btnColor = isAvailable ? 'bg-pink-200 hover:bg-pink-300' : 'bg-green-200 hover:bg-green-300';
                     const targetStatus = isAvailable ? 'unavailable' : 'available'; // สถานะที่จะส่งไปให้หลังบ้านตอนกดปุ่ม
-                    
+
                     // ปรับสีตัวอักษรของชื่อเมนูให้สีซีดลง ถ้าถูกปิดการขาย
                     const titleColor = isAvailable ? 'text-black' : 'text-gray-400';
 
@@ -69,7 +74,7 @@
                         </div>
                     </div>
                 `}).join('');
-                
+
             } catch (error) {
                 console.error("Error loading admin menus:", error);
             }
@@ -78,15 +83,20 @@
         // ฟังก์ชันเมื่อกดปุ่ม Disable / Enable
         function toggleDisable(menuId, newStatus) {
             const actionText = newStatus === 'unavailable' ? 'ปิดการขาย' : 'เปิดการขายกลับมา';
-            
+            const confirmBtnColor = newStatus === 'unavailable' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600';
             Swal.fire({
                 title: 'ยืนยัน',
                 text: `คุณต้องการ${actionText}ใช่หรือไม่?`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: newStatus === 'unavailable' ? '#f472b6' : '#4ade80',
-                cancelButtonColor: '#9ca3af',
-                confirmButtonText: `ใช่, ${actionText}`
+                confirmButtonText: `ใช่, ${actionText}`,
+                cancelButtonText: 'ยกเลิก',
+                // ใช้ Tailwind กำหนดสีปุ่มให้ชัดเจน แก้ปัญหาปุ่มหาย
+                customClass: {
+                    confirmButton: `${confirmBtnColor} text-white px-6 py-2 rounded-lg mx-2 font-bold`,
+                    cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-lg mx-2 font-bold'
+                },
+                buttonsStyling: false // สำคัญมาก: ต้องปิดเพื่อให้ Class ของ Tailwind ทำงานได้ 100%
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
@@ -99,7 +109,7 @@
 
                         if (response.ok) {
                             // อัปเดตสำเร็จ ให้รีโหลดเมนูใหม่เพื่อเปลี่ยนสีปุ่มและข้อความ
-                            loadAdminMenu(); 
+                            loadAdminMenu();
                         } else {
                             Swal.fire('ผิดพลาด', 'อัปเดตสถานะไม่สำเร็จ', 'error');
                         }
@@ -117,4 +127,5 @@
         loadAdminMenu();
     </script>
 </body>
+
 </html>
