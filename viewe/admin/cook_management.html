@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
 
 <body style="background-image: url('/public/image/BG.png');"
     class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-4">
@@ -92,8 +93,18 @@
         // แอดมินกดปุ่ม Gen Cook ID ทิ้งไว้ในระบบ
         async function generateCook() {
             const cookId = document.getElementById('new-cook-id').value;
+
+            // จุดที่ 1: แจ้งเตือนเมื่อไม่ได้กรอก ID
             if (!cookId) {
-                Swal.fire('แจ้งเตือน', 'กรุณากรอก Cook ID', 'warning');
+                Swal.fire({
+                    title: 'แจ้งเตือน',
+                    text: 'กรุณากรอก Cook ID',
+                    icon: 'warning',
+                    customClass: {
+                        confirmButton: 'btn bg-[#7066e0] hover:bg-[#5e54c9] text-white border-none px-6'
+                    },
+                    buttonsStyling: false
+                });
                 return;
             }
 
@@ -107,14 +118,40 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    Swal.fire('สำเร็จ!', `สร้างไอดี ${cookId} เรียบร้อย! ให้พ่อครัวไปลงทะเบียนตั้งรหัสผ่านได้เลยครับ`, 'success');
+                    // จุดที่ 2: แจ้งเตือนเมื่อสร้างสำเร็จ
+                    Swal.fire({
+                        title: 'สำเร็จ!',
+                        text: `สร้างไอดี ${cookId} เรียบร้อย!`,
+                        icon: 'success',
+                        customClass: {
+                            confirmButton: 'btn bg-green-500 hover:bg-green-600 text-white border-none px-6'
+                        },
+                        buttonsStyling: false
+                    });
                     document.getElementById('new-cook-id').value = '';
                     loadCooks();
                 } else {
-                    Swal.fire('ผิดพลาด', data.error || 'ไม่สามารถสร้าง ID ได้ (อาจมีชื่อซ้ำแล้ว)', 'error');
+                    // จุดที่ 3: แจ้งเตือนเมื่อเกิดข้อผิดพลาด (เช่น ID ซ้ำ)
+                    Swal.fire({
+                        title: 'ผิดพลาด',
+                        text: data.error || 'ไม่สามารถสร้าง ID ได้',
+                        icon: 'error',
+                        customClass: {
+                            confirmButton: 'btn bg-red-500 hover:bg-red-600 text-white border-none px-6'
+                        },
+                        buttonsStyling: false
+                    });
                 }
             } catch (err) {
-                Swal.fire('Error', 'เซิร์ฟเวอร์มีปัญหา', 'error');
+                Swal.fire({
+                    title: 'Error',
+                    text: 'เซิร์ฟเวอร์มีปัญหา',
+                    icon: 'error',
+                    customClass: {
+                        confirmButton: 'btn bg-gray-500 text-white border-none px-6'
+                    },
+                    buttonsStyling: false
+                });
             }
         }
 
