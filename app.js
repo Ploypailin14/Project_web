@@ -29,81 +29,149 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // #####################################################################################
-// 👑 (ADMIN) - ระบบหลังบ้าน
+// 👑 (ADMIN) - Back-office Management (รวมระบบ Upload รูปภาพและ Top 3)
 // #####################################################################################
 
-app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/login.html')));
-app.get('/admin/page/login', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/login.html')));
-app.get('/admin/page/welcome', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/welcome.html')));
-app.get('/admin/page/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/dashboard.html')));
-app.get('/admin/page/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/review.html')));
-app.get('/admin/page/menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/menu_management.html')));
-app.get('/admin/page/edit-menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/edit_menu.html')));
-app.get('/admin/page/cook', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/cook_management.html')));
+const path = require('path');
+const argon2 = require('argon2');
+// 💡 [เพิ่มใหม่] Import multer สำหรับจัดการไฟล์อัปโหลด
+const multer = require('multer');
 
-app.get('/password/:raw', (req, res) => {
-    res.send(argon2.hashSync(req.params.raw));
+// 💡 [เพิ่มใหม่] ตั้งค่าการจัดเก็บไฟล์ภาพด้วย Multer
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, './public/image/') // อย่าลืมสร้างโฟลเดอร์ public/image ไว้ในโปรเจกต์ด้วยนะครับ
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+        cb(null, uniqueSuffix + path.extname(file.originalname))
+    }
 });
+const upload = multer({ storage: storage });
 
+
+// =================================================================
+// Admin Page Routes
+// =================================================================
+app.get('/admin/page/login', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/login.html')));
+app.get('/admin/page/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/dashboard.html')));
+app.get('/admin/page/welcome', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/welcome.html')));
+app.get('/admin/page/menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/menu_management.html')));
+app.get('/admin/page/edit-menu', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/edit_menu.html')));
+app.get('/admin/page/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/review.html')));
+app.get('/admin/page/tables', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/table_management.html')));
+app.get('/admin/page/sessions', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/session_management.html')));
+
+// 1. Create a new Admin
 app.post('/admin/register', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).send('Please provide username and password');
+
     try {
         const hashPassword = await argon2.hash(password);
         const sql = "INSERT INTO admin (username, password, role) VALUES (?, ?, 'admin')";
+        
         con.query(sql, [username, hashPassword], (err, result) => {
-            if (err) return res.status(500).json({ error: "Failed to create admin." });
+            if (err) {
+                console.error("Insert DB Error:", err);
+                return res.status(500).json({ error: "Failed to create admin. Username might already exist." });
+            }
             res.status(201).json({ message: 'Admin created successfully!', username: username });
         });
-    } catch (error) { res.status(500).send('Error encrypting password'); }
+    } catch (error) {
+        console.error("Hashing error:", error);
+        res.status(500).send('Error encrypting password');
+    }
 });
 
-app.post('/admin/login', async function(req, res) {
+// 2. Admin Login System
+app.post('/admin/login', (req, res) => {
     const { username, password } = req.body;
-    const sql = "SELECT username, password FROM admin WHERE username = ?";
-    con.query(sql, [username], async function(err, results) {
-        if (err) return res.status(500).send('Server error');
-        if (results.length !== 1) return res.status(401).send('Wrong username');
+    if (!username || !password) return res.status(400).send('Please provide username and password');
+
+    const sql = "SELECT * FROM admin WHERE username = ?";
+    con.query(sql, [username], async (err, results) => {
+        if (err) return res.status(500).send('Database error');
+        if (results.length === 0) return res.status(401).send('Wrong username');
+
         try {
             const isMatch = await argon2.verify(results[0].password, password);
             if (!isMatch) return res.status(401).send('Wrong password');
-            res.status(200).json({ message: 'Login OK', username: results[0].username });
-        } catch (error) { res.status(500).send('Internal verification error'); }
+
+            const mockToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_token_for_test";
+            res.status(200).json({ token: mockToken });
+        } catch (error) {
+            console.error("Verification error:", error);
+            res.status(500).send('Internal verification error');
+        }
     });
 });
 
-app.get('/admin/dashboard', function(req, res) {
-    const sqlCustomer = `SELECT COUNT(customer_id) AS customer_count FROM customer_session WHERE DATE(login_time) = CURDATE()`;
-    const sqlRevenue = `SELECT SUM(amount) AS total_revenue FROM payment WHERE DATE(payment_date) = CURDATE()`;
-    const sqlAllTime = `SELECT (SELECT SUM(amount) FROM payment) as all_time_revenue, (SELECT AVG(rating) FROM review) as avg_rating`;
+// ==========================================
+// Cook Management
+// ==========================================
 
-    con.query(sqlCustomer, (err, cRes) => {
-        if(err) return res.status(500).send('Database error');
-        con.query(sqlRevenue, (err, rRes) => {
-            if(err) return res.status(500).send('Database error');
-            con.query(sqlAllTime, (err, aRes) => {
-                if(err) return res.status(500).send('Database error');
-                res.status(200).json({
-                    customer_count: cRes[0].customer_count || 0,
-                    today_revenue: parseInt(rRes[0].total_revenue || 0),
-                    total_revenue: parseInt(aRes[0].all_time_revenue || 0),
-                    avg_rating: parseFloat(aRes[0].avg_rating || 0).toFixed(1)
-                });
-            });
-        });
-    });
-});
-
-app.get('/admin/payments', (req, res) => {
-    con.query("SELECT payment_id, amount FROM payment", (err, results) => {
+// 3. Get all cooks
+app.get('/admin/cooks', (req, res) => {
+    con.query("SELECT cook_id, status FROM cook", (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json(results);
     });
 });
 
-// 🌟 จัดการเมนู 🌟
+// 4. Toggle cook status
+app.put('/admin/cook/:id', (req, res) => {
+    const { status } = req.body; 
+    const sql = "UPDATE cook SET status = ? WHERE cook_id = ?";
+    con.query(sql, [status, req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "Cook status updated successfully!" }); 
+    });
+});
 
-// 💡 [เพิ่มใหม่] API ดึงข้อมูล Top 3 เมนูขายดี (สำหรับหน้า Dashboard)
+// 4.1. Add a new cook account (แอดมินสร้างแค่ ID เพื่อเปิดสิทธิ์)
+app.post('/admin/cook', (req, res) => {
+    const { cook_id } = req.body; 
+
+    // 1. ตรวจสอบว่าแอดมินใส่ cook_id มาให้หรือไม่
+    if (!cook_id) {
+        return res.status(400).json({ error: 'Please provide a cook_id.' });
+    }
+
+    // 2. สร้าง Cook ใหม่ โดยเว้นว่างรหัสผ่านไว้ ('') และตั้งสถานะเป็น inactive (รอการเปิดใช้งาน)
+    const sql = "INSERT INTO cook (cook_id, password, status, role) VALUES (?, '', 'inactive', 'cook')";
+    
+    con.query(sql, [cook_id], (err, result) => {
+        if (err) {
+            // 3. ดักจับ Error กรณีแอดมินเผลอใส่ ID ซ้ำกับที่มีอยู่แล้วในระบบ
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ error: "มี Cook ID นี้ในระบบแล้ว ไม่สามารถสร้างซ้ำได้" });
+            }
+            return res.status(500).json({ error: err.message });
+        }
+        
+        // 4. ส่งข้อความตอบกลับเมื่อสร้างสำเร็จ
+        res.status(201).json({ 
+            message: "สร้างสิทธิ์ Cook ID สำเร็จ! สามารถให้พนักงานนำ ID นี้ไปตั้งรหัสผ่านได้เลย",
+            cook_id: cook_id 
+        });
+    });
+});
+
+// 4.2. Delete a cook permanently
+app.delete('/admin/cook/:id', (req, res) => {
+    const sql = "DELETE FROM cook WHERE cook_id = ?";
+    con.query(sql, [req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "Cook deleted permanently!" });
+    });
+});
+
+// ==========================================
+// Menu Management
+// ==========================================
+
+// 💡 [เพิ่มใหม่] 4.3 Get Top 3 Menus (สำหรับหน้า Dashboard)
 app.get('/admin/top-menus', (req, res) => {
     const sql = `
         SELECT m.menu_id, m.name, m.image, SUM(oi.quantity) as total_sold
@@ -119,7 +187,57 @@ app.get('/admin/top-menus', (req, res) => {
     });
 });
 
-app.get('/admin/menus-list', (req, res) => {
+// 5. Add a new menu item 💡 [อัปเดต: รองรับอัปโหลดรูปภาพ]
+app.post('/admin/menu', upload.single('imageFile'), (req, res) => {
+    const { name, description, category, price, status } = req.body;
+    
+    // ตรวจสอบว่ามีการอัปโหลดไฟล์มาไหม ถ้ามีให้สร้าง path ถ้าไม่มีให้เป็นค่าว่าง
+    const imagePath = req.file ? `/public/image/${req.file.filename}` : '';
+    const defaultStatus = status || 'available'; 
+    
+    const sql = "INSERT INTO menu_item (name, description, category, price, image, status) VALUES (?, ?, ?, ?, ?, ?)";
+    
+    con.query(sql, [name, description, category, price, imagePath, defaultStatus], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ message: "Menu item added successfully!", menu_id: result.insertId });
+    });
+});
+
+// 6. Get a single menu item
+app.get('/admin/menu/:id', (req, res) => {
+    const sql = "SELECT * FROM menu_item WHERE menu_id = ?";
+    con.query(sql, [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ message: "Menu not found" });
+        res.status(200).json(results[0]); 
+    });
+});
+
+// 7. Update menu item 💡 [อัปเดต: รองรับอัปโหลดรูปภาพ]
+app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
+    const menuId = req.params.id;
+    const { name, description, category, price, status } = req.body; 
+    
+    if (req.file) {
+        // กรณีที่มีการอัปโหลดรูปภาพใหม่มาด้วย
+        const imagePath = `/public/image/${req.file.filename}`;
+        const sql = "UPDATE menu_item SET name = ?, description = ?, category = ?, price = ?, image = ?, status = ? WHERE menu_id = ?";
+        con.query(sql, [name, description, category, price, imagePath, status, menuId], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(200).json({ message: "Menu item updated successfully with new image!" });
+        });
+    } else {
+        // กรณีที่ไม่ได้อัปโหลดรูปภาพใหม่ (อัปเดตแค่ข้อมูล text)
+        const sql = "UPDATE menu_item SET name = ?, description = ?, category = ?, price = ?, status = ? WHERE menu_id = ?";
+        con.query(sql, [name, description, category, price, status, menuId], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(200).json({ message: "Menu item updated successfully!" });
+        });
+    }
+});
+
+// 10. Get all menu items
+app.get('/admin/menu', (req, res) => {
     const sql = "SELECT * FROM menu_item";
     con.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -127,76 +245,249 @@ app.get('/admin/menus-list', (req, res) => {
     });
 });
 
-app.put('/admin/menu/status/:id', (req, res) => {
-    const { status } = req.body;
-    const sql = "UPDATE menu_item SET status = ? WHERE menu_id = ?";
-    con.query(sql, [status, req.params.id], (err, result) => {
+// 10.1 Delete a menu item permanently
+app.delete('/admin/menu/:id', (req, res) => {
+    const sql = "DELETE FROM menu_item WHERE menu_id = ?";
+    con.query(sql, [req.params.id], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "status updated" });
+        res.status(200).json({ message: "Menu item deleted permanently!" });
     });
 });
 
-// เพิ่มเมนูใหม่ (รับไฟล์รูปภาพ + หมวดหมู่)
-app.post('/admin/menu', upload.single('imageFile'), (req, res) => {
-    const { name, price, category } = req.body; // 💡 รับค่า category มาด้วย
-    const imagePath = req.file ? `/public/image/${req.file.filename}` : '';
-    
-    // 💡 เพิ่มคอลัมน์ category ในคำสั่ง SQL
-    const sql = "INSERT INTO menu_item (name, price, status, image, category) VALUES (?, ?, 'available', ?, ?)";
-    con.query(sql, [name, price, imagePath, category || 'Main Course'], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "added" });
-    });
-});
+// ==========================================
+// Dashboard & Payments
+// ==========================================
 
-// อัปเดตเมนู (แก้ไขชื่อ ราคา รูปภาพ หรือหมวดหมู่)
-app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
-    const { name, price, status, category } = req.body; // 💡 รับค่า category
-    
-    if (req.file) {
-        const imagePath = `/public/image/${req.file.filename}`;
-        // 💡 เพิ่มการอัปเดต category
-        const sql = "UPDATE menu_item SET name = ?, price = ?, status = ?, image = ?, category = ? WHERE menu_id = ?";
-        con.query(sql, [name, price, status || 'available', imagePath, category || 'Main Course', req.params.id], (err, result) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(200).json({ message: "updated with image" });
-        });
-    } else {
-        // 💡 เพิ่มการอัปเดต category
-        const sql = "UPDATE menu_item SET name = ?, price = ?, status = ?, category = ? WHERE menu_id = ?";
-        con.query(sql, [name, price, status || 'available', category || 'Main Course', req.params.id], (err, result) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.status(200).json({ message: "updated without image" });
-        });
-    }
-});
-
-// 🌟 จัดการ Cook 🌟
-app.get('/admin/cooks', (req, res) => {
-    con.query("SELECT cook_id, status, password FROM cook", (err, results) => {
+// 8. Get all payments
+app.get('/admin/payments', (req, res) => {
+    con.query("SELECT payment_id, amount FROM payment", (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json(results);
     });
 });
 
-app.post('/admin/cook', (req, res) => {
-    const { cook_id } = req.body;
-    const sql = "INSERT INTO cook (cook_id, password, role, status) VALUES (?, '', 'cook', 'inactive')";
-    
-    con.query(sql, [cook_id], (err, result) => {
-        if (err) {
-            if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: "มี Cook ID นี้ในระบบแล้ว" });
-            return res.status(500).json({ error: err.message });
-        }
-        res.status(200).json({ message: "added" });
+// 8.1 Edit Payment Amount
+app.put('/admin/payment/:id', (req, res) => {
+    const paymentId = req.params.id;
+    const { amount } = req.body;
+    if (amount === undefined) return res.status(400).json({ error: "Please provide the new amount" });
+
+    const sql = "UPDATE payment SET amount = ? WHERE payment_id = ?";
+    con.query(sql, [amount, paymentId], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (result.affectedRows === 0) return res.status(404).json({ message: `Payment ID ${paymentId} not found.` });
+        res.status(200).json({ message: "Payment amount updated successfully!" });
     });
 });
 
-app.put('/admin/cook/:id', (req, res) => {
-    const { status } = req.body; 
-    con.query("UPDATE cook SET status = ? WHERE cook_id = ?", [status, req.params.id], (err, result) => {
+// 9. Get Dashboard statistics
+app.get('/admin/dashboard', (req, res) => {
+    const { startDate, endDate } = req.query;
+    let whereClausePayment = "";
+    let whereClauseReview = "";
+    let queryParams = [];
+
+    if (startDate && endDate) {
+        whereClausePayment = "WHERE payment_time BETWEEN ? AND ?";
+        whereClauseReview = "WHERE review_time BETWEEN ? AND ?";
+        const startDateTime = `${startDate} 00:00:00`;
+        const endDateTime = `${endDate} 23:59:59`;
+        queryParams = [startDateTime, endDateTime, startDateTime, endDateTime];
+    }
+
+    const sql = `
+        SELECT 
+            (SELECT SUM(amount) FROM payment ${whereClausePayment}) as total_revenue,
+            (SELECT AVG(rating) FROM review ${whereClauseReview}) as avg_rating
+    `;
+    
+    con.query(sql, queryParams, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "updated" }); 
+        const revenue = results[0].total_revenue || 0;
+        const rating = results[0].avg_rating || 0;
+        res.status(200).json({ 
+            total_revenue: parseInt(revenue), 
+            avg_rating: parseFloat(rating).toFixed(1) 
+        });
+    });
+});
+
+// ==========================================
+// Customer Session & Order Management
+// ==========================================
+
+// 11. Get Customer Sessions Details
+app.get('/admin/customer-sessions', (req, res) => {
+    const sql = `
+        SELECT 
+            cs.customer_id, cs.table_id, cs.login_time, cs.status,
+            IFNULL(SUM(p.amount), 0) as total_amount,
+            (
+                SELECT GROUP_CONCAT(CONCAT(mi.name, ' (x', oi.quantity, ')') SEPARATOR ', ')
+                FROM order_table ot
+                JOIN order_item oi ON ot.order_id = oi.order_id
+                JOIN menu_item mi ON oi.menu_id = mi.menu_id
+                WHERE ot.customer_id = cs.customer_id
+            ) as ordered_items
+        FROM customer_session cs
+        LEFT JOIN order_table ot ON cs.customer_id = ot.customer_id
+        LEFT JOIN payment p ON ot.order_id = p.order_id
+        GROUP BY cs.customer_id
+        ORDER BY cs.login_time DESC
+    `;
+
+    con.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+// 11.1 Edit Customer Session
+app.put('/admin/customer-session/:id', (req, res) => {
+    const { table_id, status } = req.body;
+    if (!table_id || !status) return res.status(400).json({ error: "Please provide both table_id and status" });
+
+    const sql = "UPDATE customer_session SET table_id = ?, status = ? WHERE customer_id = ?";
+    con.query(sql, [table_id, status, req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (result.affectedRows === 0) return res.status(404).json({ message: "Customer session not found" });
+        res.status(200).json({ message: "Customer session updated successfully!" });
+    });
+});
+
+// 11.2 Get all Order History
+app.get('/admin/orders', (req, res) => {
+    const sql = `
+        SELECT ot.order_id, ot.customer_id, ot.status, ot.order_time,
+            GROUP_CONCAT(CONCAT(mi.name, ' (x', oi.quantity, ')') SEPARATOR ', ') as items
+        FROM order_table ot
+        JOIN order_item oi ON ot.order_id = oi.order_id
+        JOIN menu_item mi ON oi.menu_id = mi.menu_id
+        GROUP BY ot.order_id
+        ORDER BY ot.order_time DESC
+    `;
+    con.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+// 11.3 Update Order Status
+app.put('/admin/order/:id/status', (req, res) => {
+    const { status } = req.body; 
+    const sql = "UPDATE order_table SET status = ? WHERE order_id = ?";
+    con.query(sql, [status, req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (result.affectedRows === 0) return res.status(404).json({ message: `Order ID ${req.params.id} not found.` });
+        res.status(200).json({ message: "Order status updated successfully!" });
+    });
+});
+
+// ==========================================
+// Review Management
+// ==========================================
+
+// 12. Get all reviews
+app.get('/admin/reviews', (req, res) => {
+    const sql = "SELECT * FROM review ORDER BY review_time DESC";
+    con.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+// 13. Toggle hide/show review
+app.put('/admin/review/:id/hide', (req, res) => {
+    const { is_hidden } = req.body; 
+    const sql = "UPDATE review SET is_hidden = ? WHERE review_id = ?";
+    con.query(sql, [is_hidden, req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: is_hidden ? "Review hidden!" : "Review visible!" });
+    });
+});
+
+// 14. Delete review permanently
+app.delete('/admin/review/:id', (req, res) => {
+    const sql = "DELETE FROM review WHERE review_id = ?";
+    con.query(sql, [req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "Review deleted permanently!" });
+    });
+});
+
+// ==========================================
+// Table Management
+// ==========================================
+
+// 15. Get all tables
+app.get('/admin/tables', (req, res) => {
+    const sql = "SELECT * FROM restaurant_table"; 
+    con.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+// 16. Add a new table
+app.post('/admin/table', (req, res) => {
+    const { table_number } = req.body;
+    if (!table_number) return res.status(400).json({ error: "Please provide a table_number" });
+
+    const sql = "INSERT INTO restaurant_table (table_number, status) VALUES (?, 'available')"; 
+    con.query(sql, [table_number], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ message: "New table added successfully!", table_id: result.insertId });
+    });
+});
+
+// 16.1 Edit Table
+app.put('/admin/table/:id', (req, res) => {
+    const { table_number, status } = req.body;
+    const sql = "UPDATE restaurant_table SET table_number = ?, status = ? WHERE table_id = ?";
+    con.query(sql, [table_number, status, req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (result.affectedRows === 0) return res.status(404).json({ message: `Table ID ${req.params.id} not found.` });
+        res.status(200).json({ message: "Table updated successfully!" });
+    });
+});
+
+// 17. Delete a table
+app.delete('/admin/table/:id', (req, res) => {
+    const sql = "DELETE FROM restaurant_table WHERE table_id = ?";
+    con.query(sql, [req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "Table deleted permanently!" });
+    });
+});
+
+// ==========================================
+// Admin Management
+// ==========================================
+
+// 18. List all admins
+app.get('/admin/list', (req, res) => {
+    const sql = "SELECT username, role FROM admin";
+    con.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
+    });
+});
+
+// 19. Delete an admin
+app.delete('/admin/:username', (req, res) => {
+    const sql = "DELETE FROM admin WHERE username = ?";
+    con.query(sql, [req.params.username], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: `Admin ${req.params.username} deleted successfully!` });
+    });
+});
+
+// 20. Get menu items by category
+app.get('/admin/menu/category/:category', (req, res) => {
+    const sql = "SELECT * FROM menu_item WHERE category = ?";
+    con.query(sql, [req.params.category], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
     });
 });
 
