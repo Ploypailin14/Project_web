@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Session Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gradient-to-b from-[#db8b22] to-[#382c21] min-h-screen p-4 md:p-8 text-black">
+    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-2xl p-6">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <div>
+                <h1 class="text-2xl font-black text-gray-800">👥 Active Customer Sessions</h1>
+                <p class="text-sm text-gray-500 font-bold">จัดการลูกค้าที่กำลังใช้บริการในร้าน</p>
+            </div>
+            <button onclick="window.location.href='/admin/page/welcome'" class="btn btn-ghost border-gray-300 text-gray-700">◀ Back to Home</button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead class="text-gray-600 bg-gray-100 font-bold text-sm">
+                    <tr>
+                        <th>Customer ID</th>
+                        <th>Table No.</th>
+                        <th>Login Time</th>
+                        <th>Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="session-list-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <dialog id="edit_session_modal" class="modal">
+        <div class="modal-box bg-white">
+            <h3 class="font-black text-xl mb-4 text-gray-800 border-b pb-2">Update Customer Session</h3>
+            <input type="hidden" id="edit-cust-id">
+            
+            <div class="space-y-4 mt-4">
+                <div class="form-control">
+                    <label class="label font-bold text-gray-700">Assign to Table ID</label>
+                    <input type="number" id="edit-table-id" class="input input-bordered w-full bg-gray-50 border-gray-300 text-black font-bold" placeholder="ระบุ Table ID ใหม่">
+                    <span class="text-xs text-orange-500 mt-1 font-bold">*ต้องเป็น Table ID ที่มีอยู่ในระบบ</span>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label font-bold text-gray-700">Session Status</label>
+                    <select id="edit-session-status" class="select select-bordered w-full bg-gray-50 border-gray-300 text-black font-bold">
+                        <option value="active">Active (กำลังใช้บริการ)</option>
+                        <option value="closed">Closed (ปิดเซสชัน/เช็คเอาท์)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-action mt-6">
+                <button onclick="edit_session_modal.close()" class="btn btn-ghost text-gray-700">Cancel</button>
+                <button id="save-session-btn" class="btn bg-green-500 hover:bg-green-600 border-none text-white px-8">Save Changes</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="/public/js/session_management.js"></script>
+</body>
+</html>
