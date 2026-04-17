@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body style="background-image: url('/public/image/BG.png');"
+    class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-4">
+
+    <div class="w-full max-w-4xl bg-white/10 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
+
+        <div class="bg-white/90 px-6 py-4 flex items-center justify-between border-b shrink-0">
+            <button onclick="window.location.href='/admin/page/welcome'"
+                class="text-black font-bold hover:text-orange-600 flex items-center gap-2 cursor-pointer bg-transparent border-none">
+                ◀ Back to Admin
+            </button>
+            <h2 class="text-xl font-black text-gray-800">👑 จัดการผู้ดูแลระบบ</h2>
+        </div>
+
+        <div class="bg-white p-6 shrink-0 shadow-sm z-10 border-b flex flex-col gap-2">
+            <h3 class="font-bold text-gray-800">เพิ่มแอดมินคนใหม่</h3>
+            <div class="flex gap-4 items-end">
+                <div class="flex-1 form-control">
+                    <input type="text" id="new-admin-username" placeholder="ตั้งชื่อ Username"
+                        class="input input-bordered w-full bg-gray-50 border-gray-300 text-black font-bold" />
+                </div>
+                <div class="flex-1 form-control">
+                    <input type="password" id="new-admin-password" placeholder="ตั้งรหัสผ่าน Password"
+                        class="input input-bordered w-full bg-gray-50 border-gray-300 text-black font-bold" />
+                </div>
+                <button onclick="addAdmin()"
+                    class="btn bg-zinc-800 hover:bg-black border-none text-white px-8 text-lg">
+                    + เพิ่มแอดมิน
+                </button>
+            </div>
+        </div>
+
+        <div id="admin-list" class="flex-1 overflow-y-auto p-6 space-y-4">
+            </div>
+    </div>
+
+    <script src="/public/js/admin_management.js"></script>
+</body>
+</html>
