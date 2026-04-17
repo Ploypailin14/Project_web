@@ -1,27 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Table Management</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gradient-to-b from-[#db8b22] to-[#382c21] min-h-screen p-4 md:p-8 text-black">
     <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-6">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold">Restaurant Tables</h1>
-            <button onclick="window.location.href='/admin/page/welcome'" class="btn btn-ghost border-gray-300">Back</button>
+            <h1 class="text-2xl font-black text-gray-800">🍽️ Restaurant Tables</h1>
+            <button onclick="window.location.href='/admin/page/welcome'" class="btn btn-ghost border-gray-300 text-gray-700 font-bold">◀ Back</button>
         </div>
 
-        <div class="flex gap-2 mb-8 bg-gray-50 p-4 rounded-lg border">
-            <input type="number" id="new-table-no" placeholder="Enter Table Number" class="input input-bordered w-full bg-white border-gray-300">
-            <button id="add-table-btn" class="btn bg-[#db8b22] text-white border-none hover:bg-[#b06d1a]">Add</button>
+        <div class="flex gap-2 mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
+            <input type="number" id="new-table-no" placeholder="Enter Table Number" class="input input-bordered w-full bg-white border-gray-300 text-black font-bold">
+            <button id="add-table-btn" class="btn bg-[#db8b22] text-white border-none hover:bg-[#b06d1a] px-8">Add Table</button>
         </div>
 
         <div class="overflow-x-auto">
             <table class="table w-full">
-                <thead class="text-gray-600 border-b">
+                <thead class="text-gray-600 bg-gray-100 font-bold">
                     <tr>
                         <th>ID</th>
                         <th>Table Number</th>
@@ -37,24 +38,26 @@
 
     <dialog id="edit_table_modal" class="modal">
         <div class="modal-box bg-white">
-            <h3 class="font-bold text-lg mb-4 text-black">Edit Table Information</h3>
+            <h3 class="font-black text-xl mb-4 text-gray-800 border-b pb-2">Edit Table Information</h3>
             <input type="hidden" id="edit-id">
-            <div class="flex flex-col gap-4">
+            
+            <div class="flex flex-col gap-4 mt-4">
                 <div class="form-control">
-                    <label class="label font-bold text-black">Table Number</label>
-                    <input type="number" id="edit-number" class="input input-bordered w-full bg-white">
+                    <label class="label font-bold text-gray-700">Table Number</label>
+                    <input type="number" id="edit-number" class="input input-bordered w-full bg-gray-50 border-gray-300 text-black font-bold">
                 </div>
                 <div class="form-control">
-                    <label class="label font-bold text-black">Status</label>
-                    <select id="edit-status" class="select select-bordered w-full bg-white">
-                        <option value="available">Available</option>
-                        <option value="occupied">Occupied</option>
+                    <label class="label font-bold text-gray-700">Status</label>
+                    <select id="edit-status" class="select select-bordered w-full bg-gray-50 border-gray-300 text-black font-bold">
+                        <option value="available">Available (โต๊ะว่าง)</option>
+                        <option value="occupied">Occupied (มีลูกค้า)</option>
                     </select>
                 </div>
             </div>
-            <div class="modal-action">
-                <button id="save-edit-btn" class="btn btn-success text-white">Save Changes</button>
-                <button onclick="edit_table_modal.close()" class="btn">Cancel</button>
+            
+            <div class="modal-action mt-6">
+                <button onclick="edit_table_modal.close()" class="btn btn-ghost text-gray-700">Cancel</button>
+                <button id="save-edit-btn" class="btn bg-green-500 hover:bg-green-600 text-white border-none px-8">Save Changes</button>
             </div>
         </div>
     </dialog>
