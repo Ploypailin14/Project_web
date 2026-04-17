@@ -17,25 +17,9 @@ app.use(express.json());
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname)); 
 
-// ตั้งค่าการจัดเก็บไฟล์รูปภาพ
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'public/image/') 
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname) 
-    }
-});
-const upload = multer({ storage: storage });
-
-// #####################################################################################
-// 👑 (ADMIN) - Back-office Management (รวมระบบ Upload รูปภาพและ Top 3)
-// #####################################################################################
-
-const path = require('path');
-const argon2 = require('argon2');
-// 💡 [เพิ่มใหม่] Import multer สำหรับจัดการไฟล์อัปโหลด
-const multer = require('multer');
+// // #####################################################################################
+// // 👑 (ADMIN) - Back-office Management 
+// // #####################################################################################
 
 // 💡 [เพิ่มใหม่] ตั้งค่าการจัดเก็บไฟล์ภาพด้วย Multer
 const storage = multer.diskStorage({
@@ -48,7 +32,6 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
-
 
 // =================================================================
 // Admin Page Routes
