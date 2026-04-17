@@ -1,21 +1,49 @@
 document.addEventListener('DOMContentLoaded', () => {
-    loadDashboardStats(); // โหลดตัวเลขสถิติด้านบน
+    loadDashboardStats(); // โหลดตัวเลขสถิติด้านบน (ค่าเริ่มต้น)
     loadTopMenus();       // โหลดรูปภาพ 3 เมนูขายดี
 });
 
-// 1. ฟังก์ชันดึงตัวเลขสถิติ (ลูกค้า, รายได้, ดาว)
-async function loadDashboardStats() {
+// 1. ฟังก์ชันดึงตัวเลขสถิติ (รองรับการส่งวันที่ startDate, endDate)
+async function loadDashboardStats(startDate = '', endDate = '') {
     try {
-        const res = await fetch('/admin/dashboard');
+        let url = '/admin/dashboard';
+        
+        if (startDate && endDate) {
+            url += `?startDate=${startDate}&endDate=${endDate}`;
+        }
+
+        const res = await fetch(url);
         const data = await res.json();
 
-        // เอาตัวเลขไปหยอดใส่ใน HTML
         document.getElementById('customer-count').innerText = data.customer_count || 0;
-        document.getElementById('revenue-amount').innerText = (data.today_revenue || 0).toLocaleString() + ' ฿';
+        document.getElementById('revenue-amount').innerText = (data.total_revenue || 0).toLocaleString() + ' ฿';
         document.getElementById('rating-score').innerText = parseFloat(data.avg_rating || 0).toFixed(1);
     } catch (error) {
         console.error("Error loading stats:", error);
     }
+}
+
+// 💡 ฟังก์ชันเวลากดปุ่ม "ค้นหา"
+function applyDateFilter() {
+    const start = document.getElementById('start-date').value;
+    const end = document.getElementById('end-date').value;
+
+    if (!start || !end) {
+        alert('กรุณาเลือกวันที่ให้ครบทั้งสองช่องนะครับ!');
+        return;
+    }
+
+    // โหลดข้อมูลใหม่ตามวันที่ๆ เลือก
+    loadDashboardStats(start, end);
+}
+
+// 💡 ฟังก์ชันเวลากดปุ่ม "ล้างค่า"
+function clearDateFilter() {
+    document.getElementById('start-date').value = '';
+    document.getElementById('end-date').value = '';
+    
+    // โหลดข้อมูลแบบปกติ (วันนี้)
+    loadDashboardStats(); 
 }
 
 // 2. ฟังก์ชันดึงรูป Top 3 เมนูขายดีมาแสดง
@@ -25,18 +53,14 @@ async function loadTopMenus() {
         const menus = await res.json();
         const container = document.getElementById('top-menu-container');
 
-        // ถ้ายังไม่มีใครสั่งอาหารเลย ให้ขึ้นข้อความนี้แทน
         if (menus.length === 0) {
             container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center text-white font-bold text-xl py-8">ยังไม่มีข้อมูลการสั่งอาหารในระบบครับ</div>';
             return;
         }
 
-        // สีของป้าย Best Seller (อันดับ 1 แดง, 2 ส้ม, 3 เหลือง)
         const badges = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500'];
 
-        // วนลูปสร้างกล่องเมนูตามจำนวนที่ Database ส่งมาให้
         container.innerHTML = menus.map((menu, index) => {
-            // เช็คว่าเมนูนี้มีรูปไหม ถ้าไม่มีให้ใช้รูปกล่องส้มๆ
             const validImageUrl = (menu.image && menu.image.trim() !== '') 
                 ? menu.image 
                 : 'https://placehold.co/400x300/ffedd5/ea580c?text=No+Image';

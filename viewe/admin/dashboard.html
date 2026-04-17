@@ -21,16 +21,32 @@
         
         <div class="w-full max-w-5xl flex flex-col gap-8 mt-4">
             
+            <div class="bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-lg flex flex-wrap items-center justify-center gap-4 border border-white/50">
+                <div class="flex items-center gap-2">
+                    <label for="start-date" class="font-bold text-gray-700">ตั้งแต่:</label>
+                    <input type="date" id="start-date" class="input input-bordered input-sm bg-white text-black border-gray-300">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="end-date" class="font-bold text-gray-700">ถึง:</label>
+                    <input type="date" id="end-date" class="input input-bordered input-sm bg-white text-black border-gray-300">
+                </div>
+                <button onclick="applyDateFilter()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-1 px-4 rounded-lg transition-colors shadow-md">
+                    🔍 ค้นหา
+                </button>
+                <button onclick="clearDateFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1 px-4 rounded-lg transition-colors shadow-md">
+                    ❌ ล้างค่า
+                </button>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white/95 backdrop-blur-sm rounded-2xl py-6 px-4 flex flex-col items-center justify-center shadow-xl border border-white/50 transform transition hover:-translate-y-1">
-                    <div class="text-gray-500 font-bold text-lg mb-2">Customer Today</div>
+                    <div class="text-gray-500 font-bold text-lg mb-2">Customers</div>
                     <div class="text-black font-black text-4xl flex items-center gap-3">
                         <span class="text-blue-500 text-3xl">👥</span> <span id="customer-count">0</span>
                     </div>
                 </div>
 
                 <div class="bg-white/95 backdrop-blur-sm rounded-2xl py-6 px-4 flex flex-col items-center justify-center shadow-xl border border-white/50 transform transition hover:-translate-y-1">
-                    <div class="text-gray-500 font-bold text-lg mb-2">Revenue Today</div>
+                    <div class="text-gray-500 font-bold text-lg mb-2">Revenue</div>
                     <div class="text-black font-black text-4xl flex items-center gap-3">
                         <span class="text-green-500 text-3xl">💰</span> <span id="revenue-amount">0 ฿</span>
                     </div>
@@ -46,28 +62,8 @@
 
             <div class="mt-8 flex flex-col items-center">
                 <h2 class="text-3xl font-black text-white text-center mb-8 drop-shadow-md">🏆 Top 3 Best Sellers</h2>
-                
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full" id="top-menu-container">
-                    
-                    <div class="bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col transform transition hover:scale-105">
-                        <div class="absolute top-3 left-3 bg-red-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md z-10">#1 Best Seller</div>
-                        <img src="https://images.unsplash.com/photo-1559314809-0d155014e29e?auto=format&fit=crop&w=400&q=80" class="w-full h-48 object-cover">
-                        <div class="text-center text-black font-bold text-xl py-4">Pad Thai</div>
                     </div>
-
-                    <div class="bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col transform transition hover:scale-105">
-                        <div class="absolute top-3 left-3 bg-orange-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md z-10">#2 Best Seller</div>
-                        <img src="https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=400&q=80" class="w-full h-48 object-cover">
-                        <div class="text-center text-black font-bold text-xl py-4">Fried Rice</div>
-                    </div>
-
-                    <div class="bg-white rounded-2xl overflow-hidden shadow-2xl relative flex flex-col transform transition hover:scale-105">
-                        <div class="absolute top-3 left-3 bg-yellow-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md z-10">#3 Best Seller</div>
-                        <img src="https://images.unsplash.com/photo-1499638673689-79a0b5115d87?auto=format&fit=crop&w=400&q=80" class="w-full h-48 object-cover">
-                        <div class="text-center text-black font-bold text-xl py-4">Thai Tea</div>
-                    </div>
-
-                </div>
             </div>
 
         </div>
