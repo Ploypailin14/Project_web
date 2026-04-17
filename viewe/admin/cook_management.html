@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,12 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-
 <body style="background-image: url('/public/image/BG.png');"
     class="min-h-screen flex items-center justify-center bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-4">
 
-    <div
-        class="w-full max-w-4xl bg-white/10 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
+    <div class="w-full max-w-4xl bg-white/10 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden flex flex-col h-[85vh]">
 
         <div class="bg-white/90 px-6 py-4 flex items-center justify-between border-b shrink-0">
             <button onclick="window.location.href='/admin/page/welcome'"
@@ -37,179 +34,9 @@
         </div>
 
         <div id="cook-list" class="flex-1 overflow-y-auto p-6 space-y-4">
-        </div>
+            </div>
     </div>
 
-    <script>
-        // โหลดรายชื่อ Cook จากฐานข้อมูล
-        async function loadCooks() {
-            try {
-                const res = await fetch('/admin/cooks');
-                const cooks = await res.json();
-                const list = document.getElementById('cook-list');
-
-                if (cooks.length === 0) {
-                    list.innerHTML = '<div class="bg-white rounded-lg p-8 text-center text-gray-500 font-bold shadow-md">ยังไม่มีพ่อครัวในระบบ</div>';
-                    return;
-                }
-
-                list.innerHTML = cooks.map(cook => {
-                    const isActive = (cook.status === 'active');
-
-                    let statusBadge = '';
-                    if (isActive) {
-                        statusBadge = '<span class="badge badge-success text-white font-bold py-3">กำลังเข้ากะ (Active)</span>';
-                    } else {
-                        statusBadge = '<span class="badge badge-error text-white font-bold py-3">ไม่ได้เข้างาน (Inactive)</span>';
-                    }
-
-                    const btnText = isActive ? 'Disable (เลิกงาน)' : 'Active (เข้างาน)';
-                    const btnColor = isActive ? 'bg-pink-200 hover:bg-pink-300' : 'bg-green-200 hover:bg-green-300';
-
-                    // 💡 แก้ไขสถานะที่จะส่งไปหลังบ้านให้เป็น inactive ให้ตรงกับ Database
-                    const targetStatus = isActive ? 'inactive' : 'active';
-
-                    return `
-                    <div class="bg-white rounded-lg p-5 flex items-center justify-between shadow-md transition hover:shadow-lg">
-                        <div class="flex items-center gap-5">
-                            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-3xl">👨‍🍳</div>
-                            <div>
-                                <h3 class="text-2xl font-black text-gray-800">ID: ${cook.cook_id}</h3>
-                                <div class="mt-2">${statusBadge}</div>
-                            </div>
-                        </div>
-                        <button onclick="toggleCookStatus('${cook.cook_id}', '${targetStatus}')" 
-                            class="btn ${btnColor} border-none text-black rounded-xl px-6">
-                            ${btnText}
-                        </button>
-                    </div>
-                `}).join('');
-
-            } catch (error) {
-                console.error("Error loading cooks:", error);
-            }
-        }
-
-        // แอดมินกดปุ่ม Gen Cook ID ทิ้งไว้ในระบบ
-        async function generateCook() {
-            const cookId = document.getElementById('new-cook-id').value;
-
-            // จุดที่ 1: แจ้งเตือนเมื่อไม่ได้กรอก ID
-            if (!cookId) {
-                Swal.fire({
-                    title: 'แจ้งเตือน',
-                    text: 'กรุณากรอก Cook ID',
-                    icon: 'warning',
-                    customClass: {
-                        confirmButton: 'btn bg-[#7066e0] hover:bg-[#5e54c9] text-white border-none px-6'
-                    },
-                    buttonsStyling: false
-                });
-                return;
-            }
-
-            try {
-                const res = await fetch('/admin/cook', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cook_id: cookId })
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    // จุดที่ 2: แจ้งเตือนเมื่อสร้างสำเร็จ
-                    Swal.fire({
-                        title: 'สำเร็จ!',
-                        text: `สร้างไอดี ${cookId} เรียบร้อย!`,
-                        icon: 'success',
-                        customClass: {
-                            confirmButton: 'btn bg-green-500 hover:bg-green-600 text-white border-none px-6'
-                        },
-                        buttonsStyling: false
-                    });
-                    document.getElementById('new-cook-id').value = '';
-                    loadCooks();
-                } else {
-                    // จุดที่ 3: แจ้งเตือนเมื่อเกิดข้อผิดพลาด (เช่น ID ซ้ำ)
-                    Swal.fire({
-                        title: 'ผิดพลาด',
-                        text: data.error || 'ไม่สามารถสร้าง ID ได้',
-                        icon: 'error',
-                        customClass: {
-                            confirmButton: 'btn bg-red-500 hover:bg-red-600 text-white border-none px-6'
-                        },
-                        buttonsStyling: false
-                    });
-                }
-            } catch (err) {
-                Swal.fire({
-                    title: 'Error',
-                    text: 'เซิร์ฟเวอร์มีปัญหา',
-                    icon: 'error',
-                    customClass: {
-                        confirmButton: 'btn bg-gray-500 text-white border-none px-6'
-                    },
-                    buttonsStyling: false
-                });
-            }
-        }
-
-        // กดปุ่มเปลี่ยนสถานะ Disable / Active
-        function toggleCookStatus(cookId, newStatus) {
-            const actionText = newStatus === 'active' ? 'ให้พ่อครัวเข้าทำงาน' : 'ให้พ่อครัวเลิกงาน';
-
-            // แก้ในส่วนฟังก์ชัน toggleCookStatus
-            const confirmBtnClass = newStatus === 'active'
-                ? 'btn bg-green-500 hover:bg-green-600 text-white border-none mx-2'
-                : 'btn bg-pink-500 hover:bg-pink-600 text-white border-none mx-2';
-
-            Swal.fire({
-                title: 'ยืนยัน',
-                text: `ต้องการ${actionText} ใช่หรือไม่?`,
-                icon: 'question',
-                showCancelButton: true,
-                customClass: {
-                    // 2. นำตัวแปร Class มาใส่ตรงนี้
-                    confirmButton: confirmBtnClass,
-                    cancelButton: 'btn btn-ghost mx-2'
-                },
-                buttonsStyling: false,
-                confirmButtonText: 'ใช่, ตกลง',
-                cancelButtonText: 'ยกเลิก'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    try {
-                        const res = await fetch(`/admin/cook/${cookId}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ status: newStatus })
-                        });
-
-                        // 💡 เพิ่มการแจ้งเตือนผลลัพธ์
-                        if (res.ok) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'อัปเดตสถานะสำเร็จ',
-                                showConfirmButton: false,
-                                timer: 1000
-                            });
-                            loadCooks(); // โหลดข้อมูลใหม่เพื่อให้ปุ่มเปลี่ยนสี
-                        } else {
-                            const errorData = await res.json();
-                            Swal.fire('ผิดพลาด', errorData.error || 'ไม่สามารถอัปเดตได้', 'error');
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        Swal.fire('เชื่อมต่อล้มเหลว', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', 'error');
-                    }
-                }
-            });
-        }
-
-        // โหลดข้อมูลตอนเปิดหน้าเว็บครั้งแรก
-        loadCooks();
-    </script>
+    <script src="/public/js/cook_management.js"></script>
 </body>
-
 </html>
