@@ -114,32 +114,18 @@ app.put('/admin/cook/:id', (req, res) => {
     });
 });
 
-// 4.1. Add a new cook account (แอดมินสร้างแค่ ID เพื่อเปิดสิทธิ์)
+// 4.1. Add a new cook account
 app.post('/admin/cook', (req, res) => {
     const { cook_id } = req.body; 
+    if (!cook_id) return res.status(400).json({ error: 'Please provide a cook_id.' });
 
-    // 1. ตรวจสอบว่าแอดมินใส่ cook_id มาให้หรือไม่
-    if (!cook_id) {
-        return res.status(400).json({ error: 'Please provide a cook_id.' });
-    }
-
-    // 2. สร้าง Cook ใหม่ โดยเว้นว่างรหัสผ่านไว้ ('') และตั้งสถานะเป็น inactive (รอการเปิดใช้งาน)
     const sql = "INSERT INTO cook (cook_id, password, status, role) VALUES (?, '', 'inactive', 'cook')";
-    
     con.query(sql, [cook_id], (err, result) => {
         if (err) {
-            // 3. ดักจับ Error กรณีแอดมินเผลอใส่ ID ซ้ำกับที่มีอยู่แล้วในระบบ
-            if (err.code === 'ER_DUP_ENTRY') {
-                return res.status(400).json({ error: "มี Cook ID นี้ในระบบแล้ว ไม่สามารถสร้างซ้ำได้" });
-            }
+            if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: "มี Cook ID นี้ในระบบแล้ว ไม่สามารถสร้างซ้ำได้" });
             return res.status(500).json({ error: err.message });
         }
-        
-        // 4. ส่งข้อความตอบกลับเมื่อสร้างสำเร็จ
-        res.status(201).json({ 
-            message: "สร้างสิทธิ์ Cook ID สำเร็จ! สามารถให้พนักงานนำ ID นี้ไปตั้งรหัสผ่านได้เลย",
-            cook_id: cook_id 
-        });
+        res.status(201).json({ message: "สร้างสิทธิ์ Cook ID สำเร็จ!", cook_id: cook_id });
     });
 });
 
@@ -156,15 +142,15 @@ app.delete('/admin/cook/:id', (req, res) => {
 // Menu Management
 // ==========================================
 
-// 4.3 Get Top 3 Menus (อัปเดตให้รองรับการกรองวันที่ โดยดึงเวลาจาก order_table)
+// 4.3 Get Top 3 Menus 💡 [อัปเดต: รองรับ All Time, วันนี้, กรองวันที่]
 app.get('/admin/top-menus', (req, res) => {
-    const { startDate, endDate } = req.query;
-
-    // 💡 เชื่อม (JOIN) กับ order_table และสมมติว่าคอลัมน์เวลาชื่อ 'order_time'
-    let whereClause = "WHERE DATE(ot.order_time) = CURDATE()"; 
+    const { startDate, endDate, filter } = req.query;
+    let whereClause = ""; 
     let queryParams = [];
 
-    if (startDate && endDate) {
+    if (filter === 'today') {
+        whereClause = "WHERE DATE(ot.order_time) = CURDATE()"; 
+    } else if (startDate && endDate) {
         whereClause = "WHERE ot.order_time BETWEEN ? AND ?";
         const startDateTime = `${startDate} 00:00:00`;
         const endDateTime = `${endDate} 23:59:59`;
@@ -191,16 +177,13 @@ app.get('/admin/top-menus', (req, res) => {
     });
 });
 
-// 5. Add a new menu item 💡 [อัปเดต: รองรับอัปโหลดรูปภาพ]
+// 5. Add a new menu item
 app.post('/admin/menu', upload.single('imageFile'), (req, res) => {
     const { name, description, category, price, status } = req.body;
-    
-    // ตรวจสอบว่ามีการอัปโหลดไฟล์มาไหม ถ้ามีให้สร้าง path ถ้าไม่มีให้เป็นค่าว่าง
     const imagePath = req.file ? `/public/image/${req.file.filename}` : '';
     const defaultStatus = status || 'available'; 
     
     const sql = "INSERT INTO menu_item (name, description, category, price, image, status) VALUES (?, ?, ?, ?, ?, ?)";
-    
     con.query(sql, [name, description, category, price, imagePath, defaultStatus], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(201).json({ message: "Menu item added successfully!", menu_id: result.insertId });
@@ -217,13 +200,12 @@ app.get('/admin/menu/:id', (req, res) => {
     });
 });
 
-// 7. Update menu item 💡 [อัปเดต: รองรับอัปโหลดรูปภาพ]
+// 7. Update menu item
 app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
     const menuId = req.params.id;
     const { name, description, category, price, status } = req.body; 
     
     if (req.file) {
-        // กรณีที่มีการอัปโหลดรูปภาพใหม่มาด้วย
         const imagePath = `/public/image/${req.file.filename}`;
         const sql = "UPDATE menu_item SET name = ?, description = ?, category = ?, price = ?, image = ?, status = ? WHERE menu_id = ?";
         con.query(sql, [name, description, category, price, imagePath, status, menuId], (err, result) => {
@@ -231,13 +213,22 @@ app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
             res.status(200).json({ message: "Menu item updated successfully with new image!" });
         });
     } else {
-        // กรณีที่ไม่ได้อัปโหลดรูปภาพใหม่ (อัปเดตแค่ข้อมูล text)
         const sql = "UPDATE menu_item SET name = ?, description = ?, category = ?, price = ?, status = ? WHERE menu_id = ?";
         con.query(sql, [name, description, category, price, status, menuId], (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             res.status(200).json({ message: "Menu item updated successfully!" });
         });
     }
+});
+
+// 7.1 Toggle Menu Status (ปิด/เปิดการขาย) 💡 [เพิ่มใหม่ให้ครบ]
+app.put('/admin/menu/status/:id', (req, res) => {
+    const { status } = req.body;
+    const sql = "UPDATE menu_item SET status = ? WHERE menu_id = ?";
+    con.query(sql, [status, req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json({ message: "Menu status updated!" });
+    });
 });
 
 // 10. Get all menu items
@@ -284,32 +275,42 @@ app.put('/admin/payment/:id', (req, res) => {
     });
 });
 
-// 9. Get Dashboard statistics
+// 9. Get Dashboard statistics 💡 [อัปเดต: รองรับ All Time, วันนี้, กรองวันที่]
 app.get('/admin/dashboard', (req, res) => {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, filter } = req.query;
     let whereClausePayment = "";
     let whereClauseReview = "";
+    let whereClauseCustomer = "";
     let queryParams = [];
 
-    if (startDate && endDate) {
+    if (filter === 'today') {
+        whereClausePayment = "WHERE DATE(payment_time) = CURDATE()"; 
+        whereClauseReview = "WHERE DATE(review_time) = CURDATE()";
+        whereClauseCustomer = "WHERE DATE(login_time) = CURDATE()";
+    } else if (startDate && endDate) {
         whereClausePayment = "WHERE payment_time BETWEEN ? AND ?";
         whereClauseReview = "WHERE review_time BETWEEN ? AND ?";
+        whereClauseCustomer = "WHERE login_time BETWEEN ? AND ?";
         const startDateTime = `${startDate} 00:00:00`;
         const endDateTime = `${endDate} 23:59:59`;
-        queryParams = [startDateTime, endDateTime, startDateTime, endDateTime];
+        queryParams = [startDateTime, endDateTime, startDateTime, endDateTime, startDateTime, endDateTime];
     }
 
+    // 💡 คืนคอลัมน์ นับจำนวนลูกค้า (customer_count) กลับมาให้ เพื่อให้หน้าเว็บแสดงผลได้ครบถ้วน
     const sql = `
         SELECT 
+            (SELECT COUNT(customer_id) FROM customer_session ${whereClauseCustomer}) as customer_count,
             (SELECT SUM(amount) FROM payment ${whereClausePayment}) as total_revenue,
             (SELECT AVG(rating) FROM review ${whereClauseReview}) as avg_rating
     `;
     
     con.query(sql, queryParams, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
+        const customers = results[0].customer_count || 0;
         const revenue = results[0].total_revenue || 0;
         const rating = results[0].avg_rating || 0;
         res.status(200).json({ 
+            customer_count: customers,
             total_revenue: parseInt(revenue), 
             avg_rating: parseFloat(rating).toFixed(1) 
         });
