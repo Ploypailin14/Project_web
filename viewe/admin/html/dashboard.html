@@ -10,11 +10,11 @@
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col m-0 font-sans">
 
-    <header class="bg-white px-10 py-5 flex items-center shadow-md z-10 w-full shrink-0 border-b-2 border-gray-100">
-        <button onclick="window.location.href='/admin/page/welcome'" class="text-gray-500 hover:text-orange-600 font-bold text-lg flex items-center gap-2 transition-colors cursor-pointer bg-transparent border-none">
-            ◀ Back to Admin
+    <header class="bg-white px-6 py-4 flex items-center shadow-md z-10 w-full shrink-0 border-b-2 border-gray-100">
+        <button onclick="window.location.href='/admin/page/welcome'" class="btn btn-sm bg-gray-200 hover:bg-gray-300 border-none text-gray-700 font-bold flex-shrink-0">
+            ◀ กลับหน้าหลัก
         </button>
-        <h1 class="text-3xl font-black text-gray-800 ml-auto mr-auto pr-24 tracking-tight">Dashboard Stats</h1>
+        <h1 class="text-2xl font-black text-gray-800 ml-6 tracking-tight">📊 สถิติร้านอาหาร (Dashboard)</h1>
     </header>
 
     <main style="background-image: url('/public/image/BG.png');" 
@@ -25,7 +25,7 @@
             <div class="bg-white/95 backdrop-blur-sm p-4 rounded-2xl shadow-lg flex flex-wrap items-center justify-center gap-4 border border-white/50 w-full max-w-4xl mx-auto">
                 
                 <div class="flex gap-2 border-r-2 border-gray-200 pr-4">
-                    <button onclick="loadAllTime()" class="btn btn-sm bg-purple-500 hover:bg-purple-600 text-white border-none font-bold shadow-sm">🌟 All Time</button>
+                    <button onclick="loadAllTime()" class="btn btn-sm bg-purple-500 hover:bg-purple-600 text-white border-none font-bold shadow-sm">🌟 ตลอดกาล</button>
                     <button onclick="loadToday()" class="btn btn-sm bg-blue-500 hover:bg-blue-600 text-white border-none font-bold shadow-sm">📅 วันนี้</button>
                 </div>
 
@@ -44,21 +44,21 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2">
                 <div class="bg-white/95 backdrop-blur-sm rounded-2xl py-6 px-4 flex flex-col items-center justify-center shadow-xl border border-white/50 transform transition hover:-translate-y-1">
-                    <div class="text-gray-500 font-bold text-lg mb-2">Customers</div>
+                    <div class="text-gray-500 font-bold text-lg mb-2">จำนวนลูกค้า</div>
                     <div class="text-black font-black text-4xl flex items-center gap-3">
                         <span class="text-blue-500 text-3xl">👥</span> <span id="customer-count">0</span>
                     </div>
                 </div>
 
                 <div class="bg-white/95 backdrop-blur-sm rounded-2xl py-6 px-4 flex flex-col items-center justify-center shadow-xl border border-white/50 transform transition hover:-translate-y-1">
-                    <div class="text-gray-500 font-bold text-lg mb-2">Revenue</div>
+                    <div class="text-gray-500 font-bold text-lg mb-2">รายได้รวม</div>
                     <div class="text-black font-black text-4xl flex items-center gap-3">
                         <span class="text-green-500 text-3xl">💰</span> <span id="revenue-amount">0 ฿</span>
                     </div>
                 </div>
 
                 <div class="bg-white/95 backdrop-blur-sm rounded-2xl py-6 px-4 flex flex-col items-center justify-center shadow-xl border border-white/50 transform transition hover:-translate-y-1">
-                    <div class="text-gray-500 font-bold text-lg mb-2">Average Rating</div>
+                    <div class="text-gray-500 font-bold text-lg mb-2">คะแนนรีวิวเฉลี่ย</div>
                     <div class="text-black font-black text-4xl flex items-center gap-3">
                         <span class="text-yellow-400 text-3xl">⭐</span> <span id="rating-score">0.0</span>
                     </div>
@@ -66,7 +66,7 @@
             </div>
 
             <div class="mt-8 flex flex-col items-center">
-                <h2 class="text-3xl font-black text-white text-center mb-8 drop-shadow-md">🏆 Top 3 Best Sellers</h2>
+                <h2 class="text-3xl font-black text-white text-center mb-8 drop-shadow-md">🏆 3 อันดับเมนูขายดี</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full" id="top-menu-container">
                     </div>
             </div>
