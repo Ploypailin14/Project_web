@@ -156,18 +156,37 @@ app.delete('/admin/cook/:id', (req, res) => {
 // Menu Management
 // ==========================================
 
-// 💡 [เพิ่มใหม่] 4.3 Get Top 3 Menus (สำหรับหน้า Dashboard)
+// 4.3 Get Top 3 Menus (อัปเดตให้รองรับการกรองวันที่ โดยดึงเวลาจาก order_table)
 app.get('/admin/top-menus', (req, res) => {
+    const { startDate, endDate } = req.query;
+
+    // 💡 เชื่อม (JOIN) กับ order_table และสมมติว่าคอลัมน์เวลาชื่อ 'order_time'
+    let whereClause = "WHERE DATE(ot.order_time) = CURDATE()"; 
+    let queryParams = [];
+
+    if (startDate && endDate) {
+        whereClause = "WHERE ot.order_time BETWEEN ? AND ?";
+        const startDateTime = `${startDate} 00:00:00`;
+        const endDateTime = `${endDate} 23:59:59`;
+        queryParams = [startDateTime, endDateTime];
+    }
+
     const sql = `
         SELECT m.menu_id, m.name, m.image, SUM(oi.quantity) as total_sold
         FROM order_item oi
         JOIN menu_item m ON oi.menu_id = m.menu_id
+        JOIN order_table ot ON oi.order_id = ot.order_id
+        ${whereClause}
         GROUP BY m.menu_id, m.name, m.image
         ORDER BY total_sold DESC
         LIMIT 3
     `;
-    con.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+
+    con.query(sql, queryParams, (err, results) => {
+        if (err) {
+            console.error("SQL Error in top-menus:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.status(200).json(results);
     });
 });
