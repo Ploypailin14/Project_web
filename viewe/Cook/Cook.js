@@ -1,20 +1,16 @@
 const API_BASE_URL = 'http://localhost:3000'; 
 
 function showPage(pageId) {
-    // ซ่อนทุกหน้า
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
     
-    // รีเซ็ตสีปุ่ม Nav
     document.querySelectorAll('.nav-links a').forEach(a => {
         a.classList.remove('text-orange-500', 'border-orange-500');
         a.classList.add('text-gray-400', 'border-transparent');
     });
     
-    // โชว์หน้าที่เลือก
     const targetPage = document.getElementById(pageId);
     if (targetPage) targetPage.classList.remove('hidden');
     
-    // ไฮไลท์ปุ่ม Nav
     const navItem = document.getElementById('nav-' + pageId);
     if (navItem) {
         navItem.classList.remove('text-gray-400', 'border-transparent');
@@ -49,9 +45,14 @@ function logout() {
         text: 'คุณต้องการออกจากระบบใช่หรือไม่?',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#ea580c',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: 'ใช่, ออกจากระบบ'
+        confirmButtonText: 'ใช่, ออกจากระบบ',
+        cancelButtonText: 'ยกเลิก',
+        // 💡 บังคับสีปุ่มแก้ปุ่มล่องหน
+        customClass: {
+            confirmButton: 'bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg mx-2',
+            cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg mx-2'
+        },
+        buttonsStyling: false
     }).then((result) => {
         if (result.isConfirmed) {
             document.getElementById('main-nav').style.display = 'none';
@@ -76,7 +77,16 @@ async function handleAuth() {
     const password = document.getElementById('password-input').value;
     const btn = document.getElementById('submit-btn');
 
-    if (!cookId || !password) return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+    // 💡 ฟังก์ชันสร้าง Alert แบบไม่ล่องหน
+    const fireAlert = (title, text, icon, btnColor) => {
+        return Swal.fire({
+            title: title, text: text, icon: icon, confirmButtonText: 'ตกลง',
+            customClass: { confirmButton: `${btnColor} text-white font-bold py-2 px-6 rounded-lg` },
+            buttonsStyling: false
+        });
+    };
+
+    if (!cookId || !password) return fireAlert('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning', 'bg-orange-500 hover:bg-orange-600');
 
     const parsedCookId = parseInt(cookId);
 
@@ -97,17 +107,17 @@ async function handleAuth() {
                 showPage('orders');
                 document.getElementById('login-page').style.opacity = "1";
             } else {
-                Swal.fire('เข้าสู่ระบบล้มเหลว', result.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
+                fireAlert('เข้าสู่ระบบล้มเหลว', result.message || 'รหัสผ่านไม่ถูกต้อง', 'error', 'bg-red-500 hover:bg-red-600');
                 document.getElementById('login-page').style.opacity = "1";
             }
         } catch (e) {
             console.error(e);
-            Swal.fire('ข้อผิดพลาด', 'เซิร์ฟเวอร์ไม่ตอบสนอง', 'error');
+            fireAlert('ข้อผิดพลาด', 'เซิร์ฟเวอร์ไม่ตอบสนอง', 'error', 'bg-red-500 hover:bg-red-600');
             document.getElementById('login-page').style.opacity = "1";
         }
     } else {
         const confirmPw = document.getElementById('confirm-password-input').value;
-        if(password !== confirmPw) return Swal.fire('แจ้งเตือน', 'รหัสผ่านไม่ตรงกัน', 'warning');
+        if(password !== confirmPw) return fireAlert('แจ้งเตือน', 'รหัสผ่านไม่ตรงกัน', 'warning', 'bg-orange-500 hover:bg-orange-600');
 
         try {
             const res = await fetch(`${API_BASE_URL}/cook/register`, {
@@ -117,14 +127,15 @@ async function handleAuth() {
             });
             const result = await res.json();
             if(res.status === 200) {
-                Swal.fire('สำเร็จ!', 'ลงทะเบียนตั้งรหัสผ่านเรียบร้อยแล้ว', 'success');
+                // 💡 แก้ไขปุ่มล่องหนตรงนี้เลยครับ!
+                fireAlert('สำเร็จ!', 'ลงทะเบียนตั้งรหัสผ่านเรียบร้อยแล้ว', 'success', 'bg-green-500 hover:bg-green-600');
                 toggleAuth('login');
             } else {
-                Swal.fire('ผิดพลาด', result.message || "ลงทะเบียนไม่สำเร็จ", 'error');
+                fireAlert('ผิดพลาด', result.message || "ลงทะเบียนไม่สำเร็จ", 'error', 'bg-red-500 hover:bg-red-600');
             }
         } catch (e) { 
             console.error(e); 
-            Swal.fire('ข้อผิดพลาด', 'เซิร์ฟเวอร์ไม่ตอบสนอง', 'error');
+            fireAlert('ข้อผิดพลาด', 'เซิร์ฟเวอร์ไม่ตอบสนอง', 'error', 'bg-red-500 hover:bg-red-600');
         }
     }
 }
@@ -151,21 +162,9 @@ function renderOrders(orders) {
     orders.forEach(order => {
         let config = {};
         if (order.status === 'pending') {
-            config = { 
-                badgeBg: 'bg-red-100 text-red-600', 
-                badgeTxt: 'NEW ORDER', 
-                btnClass: 'bg-orange-500 hover:bg-orange-600 text-white', 
-                txt: 'Start Cooking', 
-                next: 'cooking' 
-            };
+            config = { badgeBg: 'bg-red-100 text-red-600', badgeTxt: 'NEW ORDER', btnClass: 'bg-orange-500 hover:bg-orange-600 text-white', txt: 'Start Cooking', next: 'cooking' };
         } else if (order.status === 'cooking') {
-            config = { 
-                badgeBg: 'bg-yellow-100 text-yellow-600', 
-                badgeTxt: 'COOKING', 
-                btnClass: 'bg-green-500 hover:bg-green-600 text-white', 
-                txt: 'Ready to Serve', 
-                next: 'served' 
-            };
+            config = { badgeBg: 'bg-yellow-100 text-yellow-600', badgeTxt: 'COOKING', btnClass: 'bg-green-500 hover:bg-green-600 text-white', txt: 'Ready to Serve', next: 'served' };
         } else {
             return; 
         }
@@ -222,12 +221,12 @@ async function updateOrderStatusDB(orderId, newStatus) {
         if (res.status === 200) {
             fetchActiveOrders(); 
         } else {
-            Swal.fire('ผิดพลาด', 'ไม่สามารถอัปเดตสถานะได้', 'error');
+            Swal.fire({title: 'ผิดพลาด', text: 'ไม่สามารถอัปเดตสถานะได้', icon: 'error', confirmButtonText: 'ตกลง', customClass: { confirmButton: 'bg-red-500 text-white font-bold py-2 px-6 rounded-lg' }, buttonsStyling: false});
             btn.innerText = oldText;
             btn.disabled = false;
         }
     } catch (e) { 
-        Swal.fire('ข้อผิดพลาด', 'เซิร์ฟเวอร์ไม่ตอบสนอง', 'error');
+        Swal.fire({title: 'ข้อผิดพลาด', text: 'เซิร์ฟเวอร์ไม่ตอบสนอง', icon: 'error', confirmButtonText: 'ตกลง', customClass: { confirmButton: 'bg-red-500 text-white font-bold py-2 px-6 rounded-lg' }, buttonsStyling: false});
         btn.innerText = oldText;
         btn.disabled = false;
     }
@@ -250,11 +249,7 @@ async function fetchDashboard() {
             if (result.top_menus && result.top_menus.length > 0) {
                 result.top_menus.forEach((item, index) => {
                     let icon = index === 0 ? '👑 ' : '';
-                    
-                    // 💡 แก้ไขแถวให้สว่างและใส่เส้นแบ่งสวยๆ
-                    let rowClass = index === 0 
-                        ? 'font-bold bg-orange-50 border-b border-gray-200 text-zinc-900' 
-                        : 'bg-white border-b border-gray-200 text-zinc-800 hover:bg-gray-50';
+                    let rowClass = index === 0 ? 'font-bold bg-orange-50 border-b border-gray-200 text-zinc-900' : 'bg-white border-b border-gray-200 text-zinc-800 hover:bg-gray-50';
                     
                     tbody.innerHTML += `
                         <tr class="${rowClass} transition-colors">
@@ -286,7 +281,6 @@ async function fetchReviews() {
             if (result.reviews && result.reviews.length > 0) {
                 result.reviews.forEach(review => {
                     const dateTxt = review.createdAt ? new Date(review.createdAt).toLocaleString('th-TH') : '';
-                    
                     reviewsContainer.innerHTML += `
                         <div class="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20 transform transition hover:-translate-y-1">
                             <div class="flex justify-between items-start mb-3">
@@ -307,7 +301,6 @@ async function fetchReviews() {
     } catch (e) { console.error("Reviews Error:", e); }
 }
 
-// รีเฟรชหน้า Orders อัตโนมัติทุกๆ 15 วินาที
 setInterval(() => {
     if (!document.getElementById('orders').classList.contains('hidden')) fetchActiveOrders();
 }, 15000);
