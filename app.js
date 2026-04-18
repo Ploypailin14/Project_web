@@ -591,17 +591,34 @@ app.get('/customer/status/:customerId', (req, res) => {
     });
 });
 
+// 💡 อัปเดต: ระบบจ่ายเงิน (เปลี่ยนสถานะลูกค้าเป็น closed และคืนโต๊ะให้ available)
 app.post('/customer/payment', (req, res) => {
     const { order_id, amount, customer_id } = req.body;
     if (!order_id || !customer_id) return res.status(400).json({ error: "Missing order_id or customer_id" });
 
+    // 1. บันทึกยอดเงินลงตาราง payment
     const sqlPayment = "INSERT INTO payment (order_id, amount, payment_date) VALUES (?, ?, NOW())";
     con.query(sqlPayment, [order_id, amount], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        const sqlUpdateStatus = "UPDATE customer_session SET status = 'pending_payment' WHERE customer_id = ?";
+        
+        // 2. 💡 เปลี่ยนสถานะเซสชันลูกค้าเป็น 'closed' (เช็คบิลเรียบร้อย)
+        const sqlUpdateStatus = "UPDATE customer_session SET status = 'closed' WHERE customer_id = ?";
         con.query(sqlUpdateStatus, [customer_id], (errUpdate) => {
             if (errUpdate) return res.status(500).json({ error: errUpdate.message });
-            res.status(200).json({ message: 'Payment Recorded', payment_id: result.insertId });
+            
+            // 3. 🔥 คืนโต๊ะให้ว่าง (available) อัตโนมัติ เพื่อให้ลูกค้ารายต่อไปเข้ามานั่งได้!
+            const sqlGetTable = "SELECT table_id FROM customer_session WHERE customer_id = ?";
+            con.query(sqlGetTable, [customer_id], (errTable, tableRes) => {
+                if (!errTable && tableRes.length > 0) {
+                    const tableId = tableRes[0].table_id;
+                    const sqlFreeTable = "UPDATE restaurant_table SET status = 'available' WHERE table_id = ?";
+                    con.query(sqlFreeTable, [tableId], () => {
+                        res.status(200).json({ message: 'Payment Recorded and Table Freed', payment_id: result.insertId });
+                    });
+                } else {
+                    res.status(200).json({ message: 'Payment Recorded', payment_id: result.insertId });
+                }
+            });
         });
     });
 });
