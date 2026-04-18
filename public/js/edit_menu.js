@@ -1,121 +1,127 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // ดึง ID จาก URL (เช่น ?id=2) เพื่อเช็คว่าเป็นโหมดแก้ไข หรือ โหมดสร้างใหม่
+document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const menuId = urlParams.get('id');
-    let selectedFile = null;
-    let selectedCategory = "Main Course"; // ค่าเริ่มต้นเป็น Main Course
 
-    const fileUpload = document.getElementById('file-upload');
-    const previewImage = document.getElementById('preview-image');
-    const categoryButtons = document.querySelectorAll('.category-btn');
-    const saveBtn = document.getElementById('save-change-btn');
+    let selectedCategory = 'Main Course'; 
+    let existingStatus = 'available'; 
 
-    // 1. ถ้านี่คือโหมด "แก้ไข" (มี ID) ให้ไปดึงข้อมูลเดิมมาแสดง
-    if (menuId) {
-        fetch('/admin/menus-list')
-            .then(res => res.json())
-            .then(data => {
-                const currentItem = data.find(m => m.menu_id == menuId);
-                if(currentItem) {
-                    document.getElementById('menu-name').value = currentItem.name;
-                    document.getElementById('menu-price').value = currentItem.price;
-                    
-                    // โชว์รูปเก่าถ้าระบบมีรูป
-                    if (currentItem.image && currentItem.image.trim() !== '') {
-                        previewImage.src = currentItem.image;
-                    }
+    // 1. ระบบพรีวิวรูปภาพ
+    const imageInput = document.getElementById('imageFile');
+    const previewImg = document.getElementById('preview-img');
+    const previewText = document.getElementById('preview-text');
 
-                    // อัปเดตสีปุ่มหมวดหมู่ให้ตรงกับข้อมูลใน Database
-                    if (currentItem.category) {
-                        selectedCategory = currentItem.category;
-                        categoryButtons.forEach(btn => {
-                            if (btn.getAttribute('data-category') === selectedCategory) {
-                                btn.className = "category-btn btn btn-sm bg-zinc-800 text-white hover:bg-black border-none";
-                            } else {
-                                btn.className = "category-btn btn btn-sm btn-ghost bg-gray-100 hover:bg-gray-200";
-                            }
-                        });
-                    }
-                }
-            })
-            .catch(err => console.error("Error loading menu details:", err));
-    }
-
-    // 2. ระบบพรีวิวรูปภาพเวลาแอดมินอัปโหลด
-    if (fileUpload) {
-        fileUpload.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                selectedFile = file;
-                previewImage.src = URL.createObjectURL(file);
+    imageInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewImg.classList.remove('hidden');
+                previewText.classList.add('hidden');
             }
-        });
-    }
+            reader.readAsDataURL(file);
+        }
+    });
 
-    // 3. ระบบคลิกสลับสีปุ่มหมวดหมู่
-    categoryButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            selectedCategory = this.getAttribute('data-category');
+    // 2. ระบบเปลี่ยนสีปุ่มหมวดหมู่
+    const catBtns = document.querySelectorAll('.cat-btn');
+    catBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // ล้างสีปุ่มอื่น
+            catBtns.forEach(b => {
+                b.classList.remove('bg-zinc-800', 'text-white');
+                b.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            // ไฮไลต์ปุ่มที่กด
+            e.target.classList.remove('bg-gray-100', 'text-gray-700');
+            e.target.classList.add('bg-zinc-800', 'text-white');
             
-            // รีเซ็ตปุ่มอื่นให้เป็นสีเทา
-            categoryButtons.forEach(btn => btn.className = "category-btn btn btn-sm btn-ghost bg-gray-100 hover:bg-gray-200");
-            // เปลี่ยนปุ่มที่โดนคลิกเป็นสีดำ
-            this.className = "category-btn btn btn-sm bg-zinc-800 text-white hover:bg-black border-none";
+            selectedCategory = e.target.getAttribute('data-cat');
         });
     });
 
-    // 4. ระบบบันทึกข้อมูล
-    if (saveBtn) {
-        saveBtn.addEventListener('click', async function() {
-            const menuName = document.getElementById('menu-name').value;
-            const menuPrice = document.getElementById('menu-price').value;
+    // 3. โหลดข้อมูลเดิม (ถ้าเป็นการแก้ไข)
+    if (menuId) {
+        try {
+            const res = await fetch(`/admin/menu/${menuId}`);
+            if (res.ok) {
+                const menu = await res.json();
+                
+                // 💡 นำข้อมูลมาใส่ในช่อง
+                document.getElementById('menuName').value = menu.name;
+                document.getElementById('menuPrice').value = menu.price;
+                document.getElementById('menuDesc').value = menu.description || ''; // ใส่รายละเอียด
+                
+                existingStatus = menu.status || 'available';
 
-            if (!menuName || !menuPrice) {
-                Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อและราคาอาหาร', 'warning');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('name', menuName);
-            formData.append('price', menuPrice);
-            formData.append('category', selectedCategory); 
-            
-            if (selectedFile) {
-                formData.append('imageFile', selectedFile);
-            }
-
-            try {
-                let res;
-                if (menuId) {
-                    res = await fetch(`/admin/menu/${menuId}`, {
-                        method: 'PUT',
-                        body: formData 
-                    });
-                } else {
-                    res = await fetch('/admin/menu', {
-                        method: 'POST',
-                        body: formData 
+                // เซ็ตปุ่มหมวดหมู่
+                if (menu.category) {
+                    catBtns.forEach(b => {
+                        if (b.getAttribute('data-cat') === menu.category) {
+                            b.click(); 
+                        }
                     });
                 }
 
-                if (res.ok) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'สำเร็จ!',
-                        text: menuId ? 'อัปเดตเมนูเรียบร้อย' : 'เพิ่มเมนูใหม่พร้อมรูปภาพเรียบร้อย',
-                        showConfirmButton: false,
-                        timer: 1500
-                    }).then(() => {
-                        window.location.href = '/admin/page/menu';
-                    });
-                } else {
-                    const errorData = await res.json();
-                    Swal.fire('ผิดพลาด', errorData.error || 'เซิร์ฟเวอร์ไม่ตอบสนอง หรือรูปแบบข้อมูลผิด', 'error');
+                // เอารูปเดิมมาโชว์
+                if (menu.image && menu.image.trim() !== '') {
+                    previewImg.src = menu.image;
+                    previewImg.classList.remove('hidden');
+                    previewText.classList.add('hidden');
                 }
-            } catch (error) {
-                console.error(error);
-                Swal.fire('เชื่อมต่อล้มเหลว', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', 'error');
             }
-        });
+        } catch (err) {
+            Swal.fire('ผิดพลาด', 'ไม่สามารถโหลดข้อมูลเมนูได้', 'error');
+        }
     }
+
+    // 4. บันทึกข้อมูล
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+        const name = document.getElementById('menuName').value;
+        const price = document.getElementById('menuPrice').value;
+        const description = document.getElementById('menuDesc').value; // 💡 ดึงค่ารายละเอียดมา
+
+        if (!name || !price) {
+            Swal.fire('แจ้งเตือน', 'กรุณากรอกชื่อเมนูและราคาให้ครบถ้วน', 'warning');
+            return;
+        }
+
+        // แพ็กข้อมูลทั้งหมดรวมถึงรูปภาพและรายละเอียด
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('price', price);
+        formData.append('description', description); // 💡 ส่งรายละเอียดไปด้วย
+        formData.append('category', selectedCategory);
+        formData.append('status', existingStatus);
+
+        if (imageInput.files[0]) {
+            formData.append('imageFile', imageInput.files[0]);
+        }
+
+        const method = menuId ? 'PUT' : 'POST';
+        const url = menuId ? `/admin/menu/${menuId}` : '/admin/menu';
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                body: formData 
+            });
+
+            if (res.ok) {
+                Swal.fire({
+                    icon: 'success', 
+                    title: 'บันทึกสำเร็จ!', 
+                    text: 'ระบบได้ทำการอัปเดตข้อมูลเมนูแล้ว',
+                    showConfirmButton: false, 
+                    timer: 1500
+                }).then(() => {
+                    window.location.href = '/admin/page/menu'; 
+                });
+            } else {
+                Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+            }
+        } catch (err) {
+            Swal.fire('การเชื่อมต่อล้มเหลว', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', 'error');
+        }
+    });
 });
