@@ -47,6 +47,7 @@ app.get('/admin/page/sessions', (req, res) => res.sendFile(path.join(__dirname, 
 app.get('/admin/page/manage-admins', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/admin_management.html')));
 app.get('/admin/page/cook', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/cook_management.html')));
 app.get('/admin/page/order-history', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/order_history.html')));
+app.get('/admin/page/payments', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/payment_management.html')));
 
 // 1. Create a new Admin
 app.post('/admin/register', async (req, res) => {
@@ -143,7 +144,7 @@ app.delete('/admin/cook/:id', (req, res) => {
 // Menu Management
 // ==========================================
 
-// 4.3 Get Top 3 Menus 💡 [อัปเดต: รองรับ All Time, วันนี้, กรองวันที่]
+// 4.3 Get Top 3 Menus
 app.get('/admin/top-menus', (req, res) => {
     const { startDate, endDate, filter } = req.query;
     let whereClause = ""; 
@@ -222,7 +223,7 @@ app.put('/admin/menu/:id', upload.single('imageFile'), (req, res) => {
     }
 });
 
-// 7.1 Toggle Menu Status (ปิด/เปิดการขาย) 💡 [เพิ่มใหม่ให้ครบ]
+// 7.1 Toggle Menu Status (ปิด/เปิดการขาย)
 app.put('/admin/menu/status/:id', (req, res) => {
     const { status } = req.body;
     const sql = "UPDATE menu_item SET status = ? WHERE menu_id = ?";
@@ -254,9 +255,15 @@ app.delete('/admin/menu/:id', (req, res) => {
 // Dashboard & Payments
 // ==========================================
 
-// 8. Get all payments
+// 8. 💡 [อัปเดตใหม่] Get all payments (ดึง Order ID และข้อมูลลูกค้ามาโชว์ด้วย)
 app.get('/admin/payments', (req, res) => {
-    con.query("SELECT payment_id, amount FROM payment", (err, results) => {
+    const sql = `
+        SELECT p.payment_id, p.order_id, p.amount, p.payment_date, o.customer_id
+        FROM payment p
+        LEFT JOIN order_table o ON p.order_id = o.order_id
+        ORDER BY p.payment_date DESC
+    `;
+    con.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json(results);
     });
@@ -266,7 +273,8 @@ app.get('/admin/payments', (req, res) => {
 app.put('/admin/payment/:id', (req, res) => {
     const paymentId = req.params.id;
     const { amount } = req.body;
-    if (amount === undefined) return res.status(400).json({ error: "Please provide the new amount" });
+    
+    if (amount === undefined || amount === '') return res.status(400).json({ error: "Please provide the new amount" });
 
     const sql = "UPDATE payment SET amount = ? WHERE payment_id = ?";
     con.query(sql, [amount, paymentId], (err, result) => {
@@ -276,7 +284,7 @@ app.put('/admin/payment/:id', (req, res) => {
     });
 });
 
-// 9. Get Dashboard statistics 💡 [อัปเดต: รองรับ All Time, วันนี้, กรองวันที่]
+// 9. Get Dashboard statistics
 app.get('/admin/dashboard', (req, res) => {
     const { startDate, endDate, filter } = req.query;
     let whereClausePayment = "";
@@ -297,7 +305,6 @@ app.get('/admin/dashboard', (req, res) => {
         queryParams = [startDateTime, endDateTime, startDateTime, endDateTime, startDateTime, endDateTime];
     }
 
-    // 💡 คืนคอลัมน์ นับจำนวนลูกค้า (customer_count) กลับมาให้ เพื่อให้หน้าเว็บแสดงผลได้ครบถ้วน
     const sql = `
         SELECT 
             (SELECT COUNT(customer_id) FROM customer_session ${whereClauseCustomer}) as customer_count,
@@ -361,13 +368,12 @@ app.put('/admin/customer-session/:id', (req, res) => {
     });
 });
 
-// 11.2 Get all Order History (อัปเดต: รองรับการกรองวันที่)
+// 11.2 Get all Order History
 app.get('/admin/orders', (req, res) => {
     const { startDate, endDate } = req.query;
     let whereClause = "";
     let queryParams = [];
 
-    // ถ้ามีการส่งวันที่มาให้ค้นหา
     if (startDate && endDate) {
         whereClause = "WHERE ot.order_time BETWEEN ? AND ?";
         const startDateTime = `${startDate} 00:00:00`;
