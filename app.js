@@ -508,39 +508,29 @@ app.get('/history', (req, res) => res.sendFile(path.join(__dirname, 'viewe/custo
 app.get('/customer/payment', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/payment.html')));
 app.get('/customer/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/review.html')));
 
-// 💡 อัปเดต: ระบบเข้าโต๊ะ (ป้องกันโต๊ะซ้อน + อัปเดตสถานะโต๊ะอัตโนมัติ)
 app.post('/customer/table', (req, res) => {
     const { table_id } = req.body;
     if (!table_id) return res.status(400).json({ error: "กรุณาเลือกโต๊ะครับ" });
 
-    // 1. เช็กสถานะโต๊ะจากฐานข้อมูลก่อน
     const checkTableSql = "SELECT status FROM restaurant_table WHERE table_id = ?";
     con.query(checkTableSql, [table_id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        
-        // ถ้าไม่มีเบอร์โต๊ะนี้ในระบบ
         if (results.length === 0) return res.status(404).json({ error: "ไม่พบข้อมูลโต๊ะนี้ในระบบครับ" });
 
         const tableStatus = results[0].status;
-        
-        // 2. ถ้าโต๊ะไม่ว่าง (occupied) ให้เตะกลับ
         if (tableStatus !== 'available') {
             return res.status(400).json({ error: "โต๊ะนี้มีลูกค้านั่งอยู่แล้ว กรุณาเลือกโต๊ะอื่นครับ ❌" });
         }
 
-        // 3. ถ้าโต๊ะว่าง ให้สร้าง Session ใหม่
         const insertSessionSql = "INSERT INTO customer_session (table_id, status, login_time) VALUES (?, 'active', NOW())";
         con.query(insertSessionSql, [table_id], (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             
             const customerId = result.insertId;
 
-            // 4. 🔥 อัปเดตสถานะในตารางโต๊ะให้กลายเป็น 'occupied' (ไม่ว่าง) ทันที!
             const updateTableSql = "UPDATE restaurant_table SET status = 'occupied' WHERE table_id = ?";
             con.query(updateTableSql, [table_id], (err2) => {
                 if (err2) console.error("Failed to update table status:", err2);
-                
-                // ส่งรหัสลูกค้ากลับไปให้หน้าเว็บ
                 res.status(201).json({ customerId: customerId });
             });
         });
@@ -555,6 +545,7 @@ app.get('/customer/menu', (req, res) => {
     });
 });
 
+// 💡 อัปเดต: ระบบบันทึกออเดอร์ (ดึงค่า extra และ extra_price ไปบันทึกด้วย)
 app.post('/customer/order', (req, res) => {
     const customerId = req.body.customer_id || req.body.session_id; 
     const items = req.body.items;
@@ -567,8 +558,15 @@ app.post('/customer/order', (req, res) => {
         if (err) return res.status(500).json({ error: err.message }); 
         
         const orderId = result.insertId; 
+        
         const itemValues = items.map(item => [
-            orderId, item.menu_id || item.id, item.qty || item.quantity || 1, item.detail || '-', '', 0, customerId 
+            orderId, 
+            item.menu_id || item.id, 
+            item.qty || item.quantity || 1, 
+            item.detail || '-', 
+            item.extra || '',           // <-- บันทึกข้อความสั่งพิเศษ (ถ้ามี)
+            item.extra_price || 0,      // <-- บันทึกราคาพิเศษที่บวกเพิ่ม (ถ้ามี)
+            customerId 
         ]);
         
         const sqlItems = "INSERT INTO order_item (order_id, menu_id, quantity, detail, extra, extra_price, customer_id) VALUES ?";
@@ -580,7 +578,6 @@ app.post('/customer/order', (req, res) => {
 });
 
 app.get('/customer/status/:customerId', (req, res) => {
-    // 💡 เพิ่ม mi.price เข้ามาในคำสั่ง SELECT เพื่อให้หน้าเว็บเอาไปคำนวณยอดรวมได้
     const sql = `SELECT ot.status as order_status, mi.name, mi.price, oi.detail, oi.quantity 
                  FROM order_table ot JOIN order_item oi ON ot.order_id = oi.order_id 
                  JOIN menu_item mi ON oi.menu_id = mi.menu_id 
@@ -591,22 +588,18 @@ app.get('/customer/status/:customerId', (req, res) => {
     });
 });
 
-// 💡 อัปเดต: ระบบจ่ายเงิน (เปลี่ยนสถานะลูกค้าเป็น closed และคืนโต๊ะให้ available)
 app.post('/customer/payment', (req, res) => {
     const { order_id, amount, customer_id } = req.body;
     if (!order_id || !customer_id) return res.status(400).json({ error: "Missing order_id or customer_id" });
 
-    // 1. บันทึกยอดเงินลงตาราง payment
     const sqlPayment = "INSERT INTO payment (order_id, amount, payment_date) VALUES (?, ?, NOW())";
     con.query(sqlPayment, [order_id, amount], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         
-        // 2. 💡 เปลี่ยนสถานะเซสชันลูกค้าเป็น 'closed' (เช็คบิลเรียบร้อย)
         const sqlUpdateStatus = "UPDATE customer_session SET status = 'closed' WHERE customer_id = ?";
         con.query(sqlUpdateStatus, [customer_id], (errUpdate) => {
             if (errUpdate) return res.status(500).json({ error: errUpdate.message });
             
-            // 3. 🔥 คืนโต๊ะให้ว่าง (available) อัตโนมัติ เพื่อให้ลูกค้ารายต่อไปเข้ามานั่งได้!
             const sqlGetTable = "SELECT table_id FROM customer_session WHERE customer_id = ?";
             con.query(sqlGetTable, [customer_id], (errTable, tableRes) => {
                 if (!errTable && tableRes.length > 0) {
@@ -633,7 +626,6 @@ app.post('/customer/review', (req, res) => {
 });
 
 app.get('/customer/history/:customerId', (req, res) => {
-    // 💡 ป้องกันกรณี extra_price เป็นค่าว่าง (NULL) ด้วย IFNULL
     const sql = `
         SELECT 
             ot.order_id, 
@@ -666,7 +658,6 @@ app.get('/customer/history/:customerId', (req, res) => {
                     items: []
                 };
             }
-            // 💡 พระเอกอยู่ตรงนี้: ใช้ Number() บังคับให้มันเป็นตัวเลขก่อนเอามาบวกกัน
             ordersMap[row.order_id].total_price += Number(row.item_price || 0);
             
             ordersMap[row.order_id].items.push({
