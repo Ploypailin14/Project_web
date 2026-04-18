@@ -523,29 +523,41 @@ app.get('/history', (req, res) => res.sendFile(path.join(__dirname, 'viewe/custo
 app.get('/customer/payment', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/payment.html')));
 app.get('/customer/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/review.html')));
 
+// 💡 อัปเดต: ระบบเข้าโต๊ะ (ค้นหาด้วย table_number ให้ตรงกับป้ายโต๊ะจริง)
 app.post('/customer/table', (req, res) => {
-    const { table_id } = req.body;
-    if (!table_id) return res.status(400).json({ error: "กรุณาเลือกโต๊ะครับ" });
+    // รับค่าที่ลูกค้าพิมพ์มา (ตัวแปรหน้าเว็บส่งมาชื่อ table_id แต่จริงๆ มันคือเบอร์โต๊ะ)
+    const { table_id: inputTableNumber } = req.body; 
+    if (!inputTableNumber) return res.status(400).json({ error: "กรุณาเลือกโต๊ะครับ" });
 
-    const checkTableSql = "SELECT status FROM restaurant_table WHERE table_id = ?";
-    con.query(checkTableSql, [table_id], (err, results) => {
+    // 1. ค้นหาจากช่อง table_number แทน
+    const checkTableSql = "SELECT table_id, status FROM restaurant_table WHERE table_number = ?";
+    con.query(checkTableSql, [inputTableNumber], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (results.length === 0) return res.status(404).json({ error: "ไม่พบข้อมูลโต๊ะนี้ในระบบครับ" });
+        
+        // ถ้าไม่มีเบอร์โต๊ะนี้ในระบบ
+        if (results.length === 0) return res.status(404).json({ error: "ไม่พบเบอร์โต๊ะนี้ในระบบครับ" });
 
+        // 💡 ดึง ID ลำดับแถวของจริงมาใช้
+        const realTableId = results[0].table_id;
         const tableStatus = results[0].status;
+        
+        // 2. ถ้าโต๊ะไม่ว่างให้เตะกลับ
         if (tableStatus !== 'available') {
             return res.status(400).json({ error: "โต๊ะนี้มีลูกค้านั่งอยู่แล้ว กรุณาเลือกโต๊ะอื่นครับ ❌" });
         }
 
+        // 3. เอา realTableId ไปสร้าง Session ใหม่
         const insertSessionSql = "INSERT INTO customer_session (table_id, status, login_time) VALUES (?, 'active', NOW())";
-        con.query(insertSessionSql, [table_id], (err, result) => {
+        con.query(insertSessionSql, [realTableId], (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             
             const customerId = result.insertId;
 
+            // 4. อัปเดตสถานะในตารางโต๊ะให้กลายเป็น occupied
             const updateTableSql = "UPDATE restaurant_table SET status = 'occupied' WHERE table_id = ?";
-            con.query(updateTableSql, [table_id], (err2) => {
+            con.query(updateTableSql, [realTableId], (err2) => {
                 if (err2) console.error("Failed to update table status:", err2);
+                
                 res.status(201).json({ customerId: customerId });
             });
         });
