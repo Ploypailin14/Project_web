@@ -60,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. ดึงข้อมูลจาก API หลังบ้าน (Node.js)
     async function fetchReviews() {
         try {
-            // 💡 เปลี่ยนจาก .php เป็น API ที่เราเขียนไว้ใน app.js
             const res = await fetch('/admin/reviews');
             const data = await res.json();
             renderReviews(data);
@@ -83,19 +82,37 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) { alert('Failed to update review status'); }
     };
 
-    // 5. ฟังก์ชันลบรีวิวถาวร
+    // 5. ฟังก์ชันลบรีวิวถาวร (แก้ไขปุ่มล่องหนและเปลี่ยนภาษา)
     window.deleteReview = (id) => {
         Swal.fire({
             title: 'ลบรีวิวนี้?',
             text: "ข้อมูลรีวิวจะถูกลบออกจากระบบถาวร",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            confirmButtonText: 'ใช่, ลบเลย'
+            confirmButtonText: 'ใช่, ลบเลย',
+            cancelButtonText: 'ยกเลิก', // เปลี่ยนเป็น "ยกเลิก" เรียบร้อย
+            // 💡 บังคับสีปุ่มเพื่อแก้ปัญหาปุ่มล่องหน
+            customClass: {
+                confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg mx-2',
+                cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg mx-2'
+            },
+            buttonsStyling: false // ปิดสไตล์เดิมเพื่อใช้ Tailwind
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const res = await fetch(`/admin/review/${id}`, { method: 'DELETE' });
-                if (res.ok) fetchReviews();
+                try {
+                    const res = await fetch(`/admin/review/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'ลบสำเร็จ',
+                            showConfirmButton: false,
+                            timer: 1000
+                        });
+                        fetchReviews();
+                    }
+                } catch (err) {
+                    console.error('Delete error:', err);
+                }
             }
         });
     };
