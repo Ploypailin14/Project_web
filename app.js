@@ -46,6 +46,7 @@ app.get('/admin/page/tables', (req, res) => res.sendFile(path.join(__dirname, 'v
 app.get('/admin/page/sessions', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/session_management.html')));
 app.get('/admin/page/manage-admins', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/admin_management.html')));
 app.get('/admin/page/cook', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/cook_management.html')));
+app.get('/admin/page/order-history', (req, res) => res.sendFile(path.join(__dirname, 'viewe/admin/html/order_history.html')));
 
 // 1. Create a new Admin
 app.post('/admin/register', async (req, res) => {

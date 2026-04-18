@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order History</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-b from-[#db8b22] to-[#382c21] min-h-screen p-4 md:p-8 text-black font-sans">
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-2xl p-6">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <div>
+                <h1 class="text-3xl font-black text-gray-800">📜 Order History</h1>
+                <p class="text-sm text-gray-500 font-bold">ประวัติการสั่งอาหารทั้งหมดในระบบ</p>
+            </div>
+            <button onclick="window.location.href='/admin/page/welcome'" class="btn btn-ghost border-gray-300 text-gray-700 font-bold">◀ Back to Home</button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead class="text-gray-600 bg-gray-100 font-bold text-sm">
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Customer ID</th>
+                        <th>Date & Time</th>
+                        <th>Items Ordered</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="/public/js/order_history.js"></script>
+</body>
+</html>
