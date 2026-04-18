@@ -605,7 +605,8 @@ app.post('/customer/order', (req, res) => {
 });
 
 app.get('/customer/status/:customerId', (req, res) => {
-    const sql = `SELECT ot.status as order_status, mi.name, mi.price, oi.detail, oi.quantity 
+    // 💡 อัปเดต: เพิ่ม oi.extra และ oi.extra_price เข้ามาด้วย
+    const sql = `SELECT ot.status as order_status, mi.name, mi.price, oi.detail, oi.quantity, oi.extra, IFNULL(oi.extra_price, 0) as extra_price
                  FROM order_table ot JOIN order_item oi ON ot.order_id = oi.order_id 
                  JOIN menu_item mi ON oi.menu_id = mi.menu_id 
                  WHERE ot.customer_id = ? ORDER BY ot.order_id DESC`;
