@@ -14,10 +14,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             sessionBody.innerHTML = data.map(s => {
-                // 💡 แก้ไขบั๊กป้ายสีกลืนไปกับพื้นหลัง
-                const statusBadgeClass = s.status === 'active' 
-                    ? 'badge-success text-white' 
-                    : 'bg-red-500 text-white'; // ถ้าเป็น closed ให้เป็นสีแดง
+                // 💡 แยกสี Badge ให้ชัดเจน 3 สถานะ
+                let statusBadgeClass = 'bg-gray-500 text-white'; // ค่าเริ่มต้นสีเทา
+                if (s.status === 'active') {
+                    statusBadgeClass = 'badge-success text-white';
+                } else if (s.status === 'pending_payment') {
+                    statusBadgeClass = 'bg-red-500 text-white';
+                } else if (s.status === 'closed') {
+                    statusBadgeClass = 'bg-gray-400 text-white';
+                }
 
                 return `
                 <tr class="hover:bg-gray-50 border-b transition-colors">
@@ -78,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('edit_session_modal').close();
                     loadSessions(); // โหลดข้อมูลใหม่หลังอัปเดต
                     
-                    // 💡 เปลี่ยนมาใช้ SweetAlert2 แทน alert() ธรรมดา
                     Swal.fire({
                         icon: 'success',
                         title: 'สำเร็จ!',
