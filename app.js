@@ -508,12 +508,42 @@ app.get('/history', (req, res) => res.sendFile(path.join(__dirname, 'viewe/custo
 app.get('/customer/payment', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/payment.html')));
 app.get('/customer/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/review.html')));
 
+// 💡 อัปเดต: ระบบเข้าโต๊ะ (ป้องกันโต๊ะซ้อน + อัปเดตสถานะโต๊ะอัตโนมัติ)
 app.post('/customer/table', (req, res) => {
     const { table_id } = req.body;
-    const sql = "INSERT INTO customer_session (table_id, status, login_time) VALUES (?, 'active', NOW())";
-    con.query(sql, [table_id], (err, result) => {
+    if (!table_id) return res.status(400).json({ error: "กรุณาเลือกโต๊ะครับ" });
+
+    // 1. เช็กสถานะโต๊ะจากฐานข้อมูลก่อน
+    const checkTableSql = "SELECT status FROM restaurant_table WHERE table_id = ?";
+    con.query(checkTableSql, [table_id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ customerId: result.insertId });
+        
+        // ถ้าไม่มีเบอร์โต๊ะนี้ในระบบ
+        if (results.length === 0) return res.status(404).json({ error: "ไม่พบข้อมูลโต๊ะนี้ในระบบครับ" });
+
+        const tableStatus = results[0].status;
+        
+        // 2. ถ้าโต๊ะไม่ว่าง (occupied) ให้เตะกลับ
+        if (tableStatus !== 'available') {
+            return res.status(400).json({ error: "โต๊ะนี้มีลูกค้านั่งอยู่แล้ว กรุณาเลือกโต๊ะอื่นครับ ❌" });
+        }
+
+        // 3. ถ้าโต๊ะว่าง ให้สร้าง Session ใหม่
+        const insertSessionSql = "INSERT INTO customer_session (table_id, status, login_time) VALUES (?, 'active', NOW())";
+        con.query(insertSessionSql, [table_id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            const customerId = result.insertId;
+
+            // 4. 🔥 อัปเดตสถานะในตารางโต๊ะให้กลายเป็น 'occupied' (ไม่ว่าง) ทันที!
+            const updateTableSql = "UPDATE restaurant_table SET status = 'occupied' WHERE table_id = ?";
+            con.query(updateTableSql, [table_id], (err2) => {
+                if (err2) console.error("Failed to update table status:", err2);
+                
+                // ส่งรหัสลูกค้ากลับไปให้หน้าเว็บ
+                res.status(201).json({ customerId: customerId });
+            });
+        });
     });
 });
 
