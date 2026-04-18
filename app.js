@@ -666,13 +666,17 @@ app.post('/customer/review', (req, res) => {
 });
 
 app.get('/customer/history/:customerId', (req, res) => {
+    // 💡 1. เพิ่มการดึง custom_total, extra, extra_price มาจากฐานข้อมูล
     const sql = `
         SELECT 
             ot.order_id, 
             ot.order_time, 
             ot.status,
+            ot.custom_total,
             mi.name as menu_name,
             oi.quantity,
+            oi.extra,
+            IFNULL(oi.extra_price, 0) as extra_price,
             (oi.quantity * (mi.price + IFNULL(oi.extra_price, 0))) as item_price
         FROM order_table ot 
         JOIN order_item oi ON ot.order_id = oi.order_id
@@ -694,19 +698,33 @@ app.get('/customer/history/:customerId', (req, res) => {
                     order_id: row.order_id,
                     order_time: row.order_time,
                     status: row.status,
-                    total_price: 0,
+                    custom_total: row.custom_total, // 💡 เก็บยอดที่แอดมินแก้ไว้
+                    calculated_total: 0,
                     items: []
                 };
             }
-            ordersMap[row.order_id].total_price += Number(row.item_price || 0);
+            ordersMap[row.order_id].calculated_total += Number(row.item_price || 0);
             
+            // 💡 เติมข้อความ (+15฿) ต่อท้ายชื่อเมนูในประวัติให้ด้วย
+            let extraStr = '';
+            if (row.extra && row.extra.trim() !== '') {
+                extraStr = ` (+${row.extra_price}฿)`;
+            }
+
             ordersMap[row.order_id].items.push({
-                name: row.menu_name,
+                name: row.menu_name + extraStr,
                 qty: row.quantity
             });
         });
 
-        res.json(Object.values(ordersMap));
+        // 💡 2. ตัดสินใจว่าจะใช้ยอดไหนส่งไปให้หน้าเว็บ
+        const finalResults = Object.values(ordersMap).map(order => {
+            // ถ้าแอดมินแก้ตัวเลข (custom_total ไม่ใช่ null) ให้ใช้ยอดนั้น ถ้าไม่ได้แก้ให้ใช้ยอดคำนวณปกติ
+            order.total_price = order.custom_total !== null ? order.custom_total : order.calculated_total;
+            return order;
+        });
+
+        res.json(finalResults);
     });
 });
 

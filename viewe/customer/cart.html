@@ -13,31 +13,53 @@
     <div class="fixed bottom-0 w-full bg-white p-6 shadow-2xl rounded-t-3xl">
         <div class="flex justify-between mb-4 text-xl font-bold">
             <span>รวมทั้งหมด:</span>
-            <span id="totalPrice" class="text-orange-600">0฿</span>
+            <span id="totalPrice" class="text-orange-600 font-black">0฿</span>
         </div>
-        <button onclick="confirmOrder()" class="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg">ยืนยันสั่งอาหาร</button>
+        <button onclick="confirmOrder()" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg transition-colors">ยืนยันสั่งอาหาร</button>
     </div>
 
     <script>
         let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        
         function renderCart() {
             let total = 0;
+            
+            if (cart.length === 0) {
+                document.getElementById('cartItems').innerHTML = '<div class="text-center text-gray-400 mt-10 font-bold">ไม่มีสินค้าในตะกร้า</div>';
+                document.getElementById('totalPrice').innerText = '0฿';
+                return;
+            }
+
             document.getElementById('cartItems').innerHTML = cart.map((item, index) => {
-                total += item.price * item.quantity;
+                // 💡 คำนวณราคาต่อชิ้น = ราคาหลัก + ราคาพิเศษ (ถ้ามี)
+                const itemPrice = Number(item.price || 0);
+                const extraPrice = Number(item.extra_price || 0);
+                const combinedPrice = itemPrice + extraPrice;
+                
+                // 💡 บวกเข้ายอดรวมทั้งหมด
+                total += combinedPrice * item.quantity;
+
+                // 💡 สร้างข้อความแสดงการสั่งพิเศษ
+                let extraTag = '';
+                if (item.extra && item.extra.trim() !== '') {
+                    extraTag = `<span class="text-orange-500 font-bold ml-1">(+${extraPrice}฿)</span>`;
+                }
+
                 return `
                 <div class="bg-white p-4 rounded-xl flex justify-between items-center shadow-sm">
                     <div>
-                        <h3 class="font-bold">${item.name}</h3>
-                        <p class="text-xs text-gray-400">${item.detail}</p>
-                        <p class="text-orange-500">${item.price}฿</p>
+                        <h3 class="font-bold text-gray-800">${item.name} ${extraTag}</h3>
+                        <p class="text-xs text-gray-400 mt-1">Note: ${item.detail}</p>
+                        <p class="text-orange-500 font-bold mt-1">${combinedPrice}฿</p>
                     </div>
                     <div class="flex items-center gap-3">
-                        <button onclick="updateQty(${index}, -1)" class="w-8 h-8 bg-gray-200 rounded-full">-</button>
-                        <span>${item.quantity}</span>
-                        <button onclick="updateQty(${index}, 1)" class="w-8 h-8 bg-gray-200 rounded-full">+</button>
+                        <button onclick="updateQty(${index}, -1)" class="w-8 h-8 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-full transition-colors">-</button>
+                        <span class="font-bold text-lg w-4 text-center">${item.quantity}</span>
+                        <button onclick="updateQty(${index}, 1)" class="w-8 h-8 bg-orange-100 hover:bg-orange-200 text-orange-600 font-bold rounded-full transition-colors">+</button>
                     </div>
                 </div>`;
             }).join('');
+            
             document.getElementById('totalPrice').innerText = total + '฿';
         }
 
@@ -46,7 +68,6 @@
             
             const customerId = localStorage.getItem('customerId');
             
-            // 💡 เพิ่มการเช็คว่ามี ID โต๊ะหรือยัง ถ้ายังให้เด้งกลับไปหน้าแรก
             if(!customerId) {
                 return Swal.fire('ไม่พบข้อมูลโต๊ะ', 'กรุณากลับไปหน้าแรกเพื่อสแกน/เลือกโต๊ะใหม่', 'warning')
                     .then(() => location.href = '/');
@@ -61,9 +82,14 @@
                 
                 if(res.ok) {
                     localStorage.removeItem('cart');
-                    Swal.fire('สั่งสำเร็จ!', 'ออเดอร์ถูกส่งเข้าครัวแล้ว', 'success').then(() => location.href = '/status');
+                    Swal.fire({
+                        title: 'สั่งสำเร็จ!',
+                        text: 'ออเดอร์ถูกส่งเข้าครัวแล้ว',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => location.href = '/status');
                 } else {
-                    // 💡 ถ้าพัง ให้ดึงข้อความ Error จากหลังบ้านมาโชว์ให้รู้ไปเลยว่าพังที่อะไร!
                     const errData = await res.json();
                     console.error("Backend Error:", errData);
                     Swal.fire('ผิดพลาด', 'เซิร์ฟเวอร์แจ้งว่า: ' + (errData.error || 'ไม่สามารถสั่งอาหารได้'), 'error');
@@ -79,6 +105,7 @@
             localStorage.setItem('cart', JSON.stringify(cart));
             renderCart();
         }
+        
         renderCart();
     </script>
 </body>
