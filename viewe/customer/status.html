@@ -28,25 +28,13 @@
     </div>
 
     <div class="w-full max-w-2xl mx-auto px-6 space-y-4" id="order-container">
-        
-        <div class="bg-white rounded-2xl p-5 flex justify-between items-center shadow-sm border-l-[6px] border-yellow-400">
-            <div>
-                <h3 class="font-bold text-xl text-gray-800">ผัดคะน้าหมูกรอบ</h3>
-                <p class="text-gray-400 text-sm mt-1">Note: -</p>
-            </div>
-            <div class="text-right">
-                <div class="text-gray-300 text-xs font-black tracking-widest uppercase mb-1">Pending</div>
-                <div class="text-orange-500 font-black text-2xl">x1</div>
-            </div>
-        </div>
-
         </div>
 
     <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-5 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] z-50">
         <div class="w-full max-w-2xl mx-auto">
             <div class="flex justify-between items-end mb-4 px-2">
                 <span class="text-gray-500 font-bold text-lg">ยอดรวมทั้งหมด:</span>
-                <span class="text-[#ea580c] font-black text-3xl" id="total-amount-display">40฿</span>
+                <span class="text-[#ea580c] font-black text-3xl" id="total-amount-display">0฿</span>
             </div>
             
             <button onclick="goToPayment()" class="w-full bg-[#ea580c] hover:bg-orange-700 text-white font-bold py-4 rounded-xl text-xl shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]">
@@ -56,11 +44,10 @@
     </div>
 
     <script>
-        // ดึงรหัสลูกค้าจากที่เคยบันทึกไว้ตอนเข้าโต๊ะ
         const customerId = localStorage.getItem('customerId');
         let currentTotal = 0; 
         let currentOrderId = 0; 
-        let canPay = false; // 💡 ตัวแปรใหม่: เอาไว้เช็คว่าอาหารเสิร์ฟครบหรือยัง
+        let canPay = false; 
 
         async function loadOrderData() {
             if (!customerId) return;
@@ -73,19 +60,23 @@
                 container.innerHTML = ''; 
                 
                 let sum = 0; 
-                let allServed = true; // 💡 สมมติไว้ก่อนว่าเสิร์ฟครบแล้ว
+                let allServed = true; 
                 let hasItem = false;
 
                 statusData.forEach(item => {
                     hasItem = true;
-                    sum += (Number(item.price || 0) * Number(item.quantity || 1));
+                    
+                    // 💡 แก้ไขสูตรคำนวณ: เอา (ราคาหลัก + ราคาพิเศษ) x จำนวน
+                    const itemPrice = Number(item.price || 0);
+                    const extraPrice = Number(item.extra_price || 0);
+                    const qty = Number(item.quantity || 1);
+                    
+                    sum += ((itemPrice + extraPrice) * qty);
 
-                    // 💡 ด่านตรวจ: ถ้าเจอจานไหนยังไม่ Served ให้เปลี่ยนเป็น false ทันที
                     if (item.order_status === 'pending' || item.order_status === 'cooking') {
                         allServed = false;
                     }
 
-                    // กำหนดสีและข้อความให้ตรงกับสถานะ
                     let borderColor = 'border-yellow-400';
                     let textColor = 'text-yellow-500';
                     let statusText = 'Pending';
@@ -100,29 +91,30 @@
                         statusText = 'Served';
                     }
 
-                    // สร้างการ์ดรายการอาหาร
+                    // 💡 เพิ่มการแสดงผลว่ามีการสั่งพิเศษ
+                    let noteDisplay = item.detail || '-';
+                    if (item.extra && item.extra.trim() !== '') {
+                        noteDisplay += ` <span class="text-orange-500 font-bold ml-1">| ${item.extra} (+${extraPrice}฿)</span>`;
+                    }
+
                     container.innerHTML += `
                         <div class="bg-white rounded-2xl p-5 flex justify-between items-center shadow-sm border-l-[6px] ${borderColor}">
                             <div>
                                 <h3 class="font-bold text-xl text-gray-800">${item.name}</h3>
-                                <p class="text-gray-400 text-sm mt-1">Note: ${item.detail || '-'}</p>
+                                <p class="text-gray-400 text-sm mt-1">Note: ${noteDisplay}</p>
                             </div>
                             <div class="text-right">
                                 <div class="${textColor} text-xs font-black tracking-widest uppercase mb-1">${statusText}</div>
-                                <div class="text-orange-500 font-black text-2xl">x${item.quantity}</div>
+                                <div class="text-orange-500 font-black text-2xl">x${qty}</div>
                             </div>
                         </div>
                     `;
                 });
 
-                // อัปเดตยอดรวม
                 currentTotal = sum;
                 document.getElementById('total-amount-display').innerText = currentTotal + '฿';
-
-                // 💡 สรุปผล: จะจ่ายเงินได้ ก็ต่อเมื่อมีของสั่ง และของทุกชิ้นเสิร์ฟครบแล้วเท่านั้น
                 canPay = (hasItem && allServed);
 
-                // ดึงข้อมูลรหัสออเดอร์
                 const resHistory = await fetch(`/customer/history/${customerId}`);
                 const historyData = await resHistory.json();
                 if (historyData.length > 0) {
@@ -134,20 +126,15 @@
             }
         }
 
-        // โหลดข้อมูลทันทีที่เปิดหน้าเว็บ
         loadOrderData();
-
-        // ดึงข้อมูลใหม่ทุกๆ 3 วินาที (Real-time)
         setInterval(loadOrderData, 3000);
 
-        // ฟังก์ชันเมื่อกดปุ่ม "ชำระเงิน"
         function goToPayment() {
             if(currentOrderId === 0 || currentTotal === 0) {
                 Swal.fire('ไม่มีรายการ', 'ไม่พบรายการอาหารที่ต้องชำระเงิน', 'warning');
                 return;
             }
 
-            // 💡 ดักจับตรงนี้! ถ้าพยายามกดจ่ายเงินตอนของยังไม่ครบ
             if(!canPay) {
                 Swal.fire({
                     icon: 'warning',
@@ -158,7 +145,6 @@
                 return;
             }
 
-            // ถ้าทุกอย่าง Served ครบหมดแล้ว ค่อยพาไปหน้าจ่ายเงิน
             window.location.href = `/customer/payment?total=${currentTotal}&id=${currentOrderId}`;
         }
     </script>
