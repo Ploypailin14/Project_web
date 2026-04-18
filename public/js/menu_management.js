@@ -1,26 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
     const backBtn = document.getElementById('back-to-admin');
     
-    // 1. จัดการปุ่มถอยหลัง (แก้พาธให้ถูกต้อง)
     if (backBtn) {
         backBtn.addEventListener('click', () => {
             window.location.href = '/admin/page/welcome'; 
         });
     }
 
-    // 2. โหลดรายการเมนู
     loadAdminMenu();
 });
 
-// ฟังก์ชันโหลดเมนู (ย้ายมาจากหน้า HTML)
+// ฟังก์ชันโหลดเมนู
 async function loadAdminMenu() {
+    const list = document.getElementById('admin-menu-list');
     try {
-        const res = await fetch('/admin/menus-list');
+        // 💡 แก้ไข API ให้ตรงกับหลังบ้าน (เปลี่ยนจาก menus-list เป็น menu)
+        const res = await fetch('/admin/menu');
+        
+        if (!res.ok) {
+            throw new Error('Network response was not ok');
+        }
+
         const items = await res.json();
-        const list = document.getElementById('admin-menu-list');
 
         if (items.length === 0) {
-            list.innerHTML = '<div class="bg-white rounded-lg p-8 text-center text-gray-500 font-bold shadow-md">ยังไม่มีเมนูอาหารในระบบ กรุณากดปุ่ม Add new menu</div>';
+            list.innerHTML = '<div class="bg-white/90 rounded-lg p-8 text-center text-gray-500 font-bold shadow-md">ยังไม่มีเมนูอาหารในระบบ กรุณากดปุ่ม Add new menu</div>';
             return;
         }
 
@@ -51,6 +55,8 @@ async function loadAdminMenu() {
 
     } catch (error) {
         console.error("Error loading admin menus:", error);
+        // 💡 เพิ่มการแสดงผล Error บนหน้าจอ
+        list.innerHTML = '<div class="bg-white/90 rounded-lg p-8 text-center text-red-500 font-bold shadow-md">ไม่สามารถดึงข้อมูลเมนูได้ (ตรวจสอบการเชื่อมต่อเซิร์ฟเวอร์)</div>';
     }
 }
 
@@ -81,7 +87,7 @@ window.toggleDisable = function(menuId, newStatus) {
                 });
 
                 if (response.ok) {
-                    loadAdminMenu(); // รีโหลดข้อมูลใหม่
+                    loadAdminMenu(); 
                     Swal.fire({ icon: 'success', title: 'สำเร็จ', showConfirmButton: false, timer: 1000 });
                 } else {
                     Swal.fire('ผิดพลาด', 'อัปเดตสถานะไม่สำเร็จ', 'error');
