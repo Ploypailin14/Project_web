@@ -102,23 +102,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 5. Delete Table
+   // 5. Delete Table (อัปเดตแก้ปุ่มล่องหน)
     window.deleteTable = (id) => {
         Swal.fire({
             title: 'Are you sure?',
             text: "คุณต้องการลบโต๊ะนี้ใช่หรือไม่?",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#9ca3af',
-            confirmButtonText: 'Yes, delete it!'
+            confirmButtonText: 'ใช่, ลบเลย',
+            cancelButtonText: 'ยกเลิก',
+            // 💡 ท่าไม้ตาย: บังคับสีปุ่มด้วย Tailwind
+            customClass: {
+                confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg mx-2',
+                cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg mx-2'
+            },
+            buttonsStyling: false // ปิดสไตล์เดิมเพื่อให้ Tailwind ทำงาน 100%
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
                     const res = await fetch(`/admin/table/${id}`, { method: 'DELETE' });
                     if (res.ok) {
-                        Swal.fire({ icon: 'success', title: 'Deleted!', showConfirmButton: false, timer: 1000 });
-                        loadTables();
+                        Swal.fire({ icon: 'success', title: 'ลบสำเร็จ!', showConfirmButton: false, timer: 1000 });
+                        loadTables(); // โหลดรายการโต๊ะใหม่
                     } else {
                         Swal.fire('Error', 'ลบข้อมูลไม่สำเร็จ', 'error');
                     }
