@@ -7,17 +7,26 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>Menu List</title>
     <style>
-        /* ซ่อน Scrollbar ของแถบหมวดหมู่ แต่ยังให้เลื่อนซ้ายขวาได้ */
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .swal-extra-checkbox {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 12px;
+            background: #fff8eb;
+            border-radius: 15px;
+            border: 1px dashed #f39c12;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        .swal-extra-checkbox:hover { background: #ffefd5; }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-24 font-sans">
+<body class="bg-gray-50 min-h-screen pb-24 font-sans text-black">
     
     <div class="sticky top-0 z-50 shadow-lg">
         <div class="bg-[#d48806] p-5 flex justify-between items-center text-white">
@@ -29,19 +38,14 @@
 
         <div class="bg-[#f39c12] px-4 py-3 overflow-x-auto whitespace-nowrap flex gap-3 hide-scrollbar">
             <button onclick="filterCategory('All', this)" class="cat-btn bg-white text-[#d48806] font-bold px-6 py-2 rounded-full shadow-sm transition-all duration-200">All</button>
-            
             <button onclick="filterCategory('Main Course', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">Main Course</button>
-            
             <button onclick="filterCategory('Appetizer', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">Appetizer</button>
-            
             <button onclick="filterCategory('Dessert', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">Dessert</button>
-            
             <button onclick="filterCategory('Beverage', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">Beverage</button>
         </div>
     </div>
 
-    <div id="menuList" class="p-4 space-y-5 max-w-2xl mx-auto mt-2">
-        </div>
+    <div id="menuList" class="p-4 space-y-5 max-w-2xl mx-auto mt-2"></div>
 
     <div class="fixed bottom-0 w-full bg-white p-4 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] flex justify-around rounded-t-[2rem] z-50">
         <button onclick="location.href='/menu'" class="flex flex-col items-center text-orange-500 font-bold">
@@ -56,18 +60,13 @@
     </div>
 
     <script>
-        // โชว์เลขโต๊ะ
         document.getElementById('displayTable').innerText = localStorage.getItem('tableNumber') || '?';
+        let allMenuItems = [];
 
-        let allMenuItems = []; // 💡 ตัวแปรเก็บเมนูทั้งหมด
-
-        // 1. โหลดข้อมูลเมนูทั้งหมดจากฐานข้อมูล (ทำแค่ครั้งแรกตอนเปิดหน้า)
         async function loadMenu() {
             try {
                 const res = await fetch('/customer/menu');
                 allMenuItems = await res.json();
-                
-                // สั่งวาดเมนู "ทั้งหมด" (All) ลงบนจอ
                 renderMenu('All');
             } catch (error) {
                 console.error("Error loading menus:", error);
@@ -75,93 +74,109 @@
             }
         }
 
-        // 2. ฟังก์ชันสำหรับวาดเมนูลงบนจอ (ตามหมวดหมู่ที่เลือก)
         function renderMenu(categoryToFilter) {
             const list = document.getElementById('menuList');
-            
-            // 💡 กรองข้อมูล: ถ้าเลือก 'All' เอาทั้งหมด ถ้าเลือกหมวดอื่นก็คัดมาเฉพาะหมวดนั้น
             const filteredItems = (categoryToFilter === 'All') 
                 ? allMenuItems 
                 : allMenuItems.filter(item => item.category === categoryToFilter);
 
-            // ถ้าหมวดนั้นไม่มีอาหารเลย
             if (filteredItems.length === 0) {
-                list.innerHTML = `
-                    <div class="flex flex-col items-center justify-center mt-16 opacity-50">
-                        <span class="text-6xl mb-4">🍽️</span>
-                        <p class="text-center text-gray-500 font-bold text-lg">ยังไม่มีเมนูในหมวดหมู่นี้</p>
-                    </div>`;
+                list.innerHTML = `<div class="flex flex-col items-center justify-center mt-16 opacity-50"><span class="text-6xl mb-4">🍽️</span><p class="text-gray-500 font-bold">ยังไม่มีเมนูในหมวดนี้</p></div>`;
                 return;
             }
             
-            // ถ้ามีอาหาร ก็วนลูปสร้าง HTML ปกติ
             list.innerHTML = filteredItems.map(item => {
-                const validImageUrl = (item.image && item.image.trim() !== '') 
-                ? item.image 
-                : 'https://placehold.co/400x400/ffedd5/ea580c?text=No+Image';
-
-                // เพิ่มการแสดงชื่อหมวดหมู่ไว้ใต้ชื่ออาหารนิดนึง (จะได้รู้ว่าดึงมาถูก)
-                const categoryText = item.category || 'Main Course';
-
+                const validImageUrl = (item.image && item.image.trim() !== '') ? item.image : 'https://placehold.co/400x400/ffedd5/ea580c?text=No+Image';
                 return `
                 <div class="bg-white rounded-[2rem] p-4 flex shadow-md border border-gray-50 items-center transform transition duration-300 hover:scale-[1.02]">
-                    <img src="${validImageUrl}" 
-                        class="w-28 h-28 rounded-[1.5rem] object-cover border-4 border-orange-50 shadow-inner shrink-0">
+                    <img src="${validImageUrl}" class="w-28 h-28 rounded-[1.5rem] object-cover border-4 border-orange-50 shadow-inner shrink-0">
                     <div class="ml-5 flex-1">
                         <h3 class="text-xl font-bold text-gray-800 leading-tight">${item.name}</h3>
-                        <p class="text-gray-400 text-xs font-semibold mt-1 bg-gray-100 inline-block px-2 py-0.5 rounded-md">${categoryText}</p>
+                        <p class="text-gray-400 text-xs font-semibold mt-1 bg-gray-100 inline-block px-2 py-0.5 rounded-md">${item.category}</p>
                         <div class="flex justify-between items-center mt-3">
                             <span class="text-2xl font-black text-[#d48806]">${item.price}฿</span>
-                            
-                            <button onclick="addToCart(${item.menu_id}, '${item.name}', ${item.price})" 
-                                class="bg-[#f39c12] hover:bg-orange-600 text-white px-6 py-2 rounded-xl font-bold shadow-md active:scale-90 transition-all">
-                                + Add
-                            </button>
-                            
+                            <button onclick="openOrderModal(${item.menu_id}, '${item.name}', ${item.price}, '${item.category}')" class="bg-[#f39c12] hover:bg-orange-600 text-white px-6 py-2 rounded-xl font-bold shadow-md active:scale-90 transition-all">+ Add</button>
                         </div>
                     </div>
-                </div>
-                `}).join('');
+                </div>`;
+            }).join('');
         }
 
-        // 3. ฟังก์ชันเมื่อลูกค้ากดปุ่มหมวดหมู่ด้านบน
         function filterCategory(category, btnElement) {
-            // 3.1 รีเซ็ตสีปุ่มทุกอันให้กลับไปเป็นแบบ "โปร่งใส (ไม่ได้เลือก)"
-            const buttons = document.querySelectorAll('.cat-btn');
-            buttons.forEach(btn => {
+            document.querySelectorAll('.cat-btn').forEach(btn => {
                 btn.className = "cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200";
             });
-
-            // 3.2 เปลี่ยนสีปุ่มที่ลูกค้าเพิ่งกด ให้กลายเป็นสีขาว (เพื่อแสดงว่าเลือกอยู่)
             btnElement.className = "cat-btn bg-white text-[#d48806] font-bold px-6 py-2 rounded-full shadow-sm transition-all duration-200";
-
-            // 3.3 สั่งวาดเมนูใหม่ตามหมวดที่เลือก
             renderMenu(category);
         }
 
-        // 4. ฟังก์ชันใส่ตะกร้า (เหมือนเดิม)
-        function addToCart(id, name, price) {
+        // 💡 แก้ไขฟังก์ชัน Modal ให้ยกเว้น Beverage และ Dessert
+        function openOrderModal(id, name, price, category) {
+            // เช็กหมวดหมู่ที่ไม่ต้องมีปุ่มพิเศษ
+            const isExcluded = (category === 'Beverage' || category === 'Dessert');
+
+            let extraSectionHtml = '';
+            if (!isExcluded) {
+                extraSectionHtml = `
+                    <label for="swal-extra" class="swal-extra-checkbox">
+                        <input type="checkbox" id="swal-extra" class="w-5 h-5 accent-orange-500">
+                        <span class="font-bold text-gray-700">สั่งพิเศษ (+15 บาท)</span>
+                    </label>
+                `;
+            }
+
             Swal.fire({
-                title: name,
-                input: 'text',
-                inputPlaceholder: 'รายละเอียดเพิ่มเติม (เช่น เผ็ดน้อย)',
+                title: `<span class="text-2xl font-black">${name}</span>`,
+                html: `
+                    <input id="swal-detail" class="swal2-input !mt-2 !mx-0 w-full rounded-xl text-base" placeholder="รายละเอียดเพิ่มเติม (เช่น เผ็ดน้อย / หวานน้อย)">
+                    ${extraSectionHtml}
+                `,
                 showCancelButton: true,
                 confirmButtonColor: '#f39c12',
                 cancelButtonColor: '#d33',
                 confirmButtonText: 'Add to Cart',
                 cancelButtonText: 'Cancel',
-                customClass: { popup: 'rounded-3xl' } // ทำให้ Popup มนๆ สวยขึ้น
+                customClass: { popup: 'rounded-[2rem]' },
+                preConfirm: () => {
+                    const extraCheckbox = document.getElementById('swal-extra');
+                    return {
+                        detail: document.getElementById('swal-detail').value || '-',
+                        isExtra: extraCheckbox ? extraCheckbox.checked : false
+                    }
+                }
             }).then(result => {
                 if(result.isConfirmed) {
-                    let cart = JSON.parse(localStorage.getItem('cart')) || [];
-                    cart.push({ menu_id: id, name: name, price: price, quantity: 1, detail: result.value || '-' });
-                    localStorage.setItem('cart', JSON.stringify(cart));
-                    Swal.fire({ icon: 'success', title: 'Added!', showConfirmButton: false, timer: 800, customClass: { popup: 'rounded-3xl' } });
+                    addToCart(id, name, price, result.value.detail, result.value.isExtra);
                 }
             });
         }
+
+        function addToCart(id, name, basePrice, detail, isExtra) {
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const extraText = isExtra ? 'พิเศษ' : '';
+            const extraPrice = isExtra ? 15 : 0;
+
+            cart.push({ 
+                menu_id: id, 
+                name: name, 
+                price: basePrice, 
+                quantity: 1, 
+                detail: detail,
+                extra: extraText,
+                extra_price: extraPrice
+            });
+
+            localStorage.setItem('cart', JSON.stringify(cart));
+            
+            Swal.fire({ 
+                icon: 'success', 
+                title: 'เพิ่มลงตะกร้าแล้ว!', 
+                showConfirmButton: false, 
+                timer: 800, 
+                customClass: { popup: 'rounded-[2rem]' } 
+            });
+        }
         
-        // เริ่มโหลดเมนูทันทีที่เปิดหน้า
         loadMenu();
     </script>
 </body>
