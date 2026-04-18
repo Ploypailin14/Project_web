@@ -17,6 +17,23 @@
             <button onclick="window.location.href='/admin/page/welcome'" class="btn btn-ghost border-gray-300 text-gray-700 font-bold">◀ Back to Home</button>
         </div>
 
+        <div class="bg-gray-50 p-4 rounded-xl mb-6 flex flex-wrap items-center justify-between gap-4 border border-gray-200">
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <label for="start-date" class="font-bold text-gray-700 text-sm">ตั้งแต่:</label>
+                    <input type="date" id="start-date" class="input input-bordered input-sm bg-white text-black font-bold">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="end-date" class="font-bold text-gray-700 text-sm">ถึง:</label>
+                    <input type="date" id="end-date" class="input input-bordered input-sm bg-white text-black font-bold">
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="applyDateFilter()" class="btn btn-sm bg-orange-500 hover:bg-orange-600 text-white font-bold border-none shadow-sm px-6">🔍 Search</button>
+                <button onclick="clearDateFilter()" class="btn btn-sm bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold border-none shadow-sm px-6">❌ Clear</button>
+            </div>
+        </div>
+
         <div class="overflow-x-auto">
             <table class="table w-full">
                 <thead class="text-gray-600 bg-gray-100 font-bold text-sm">

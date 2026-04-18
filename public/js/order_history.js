@@ -2,19 +2,24 @@ document.addEventListener('DOMContentLoaded', () => {
     loadOrderHistory();
 });
 
-async function loadOrderHistory() {
+// 💡 อัปเดต: รองรับการรับค่า startDate และ endDate
+async function loadOrderHistory(startDate = '', endDate = '') {
     const tbody = document.getElementById('history-body');
     try {
-        const res = await fetch('/admin/orders');
+        let url = '/admin/orders';
+        if (startDate && endDate) {
+            url += `?startDate=${startDate}&endDate=${endDate}`;
+        }
+
+        const res = await fetch(url);
         const data = await res.json();
 
         if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 font-bold text-lg">ยังไม่มีประวัติการสั่งอาหาร</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-gray-500 font-bold text-lg">ไม่มีประวัติการสั่งอาหารในช่วงเวลานี้</td></tr>`;
             return;
         }
 
         tbody.innerHTML = data.map(order => {
-            // ทำสี Badge สถานะให้ดูง่ายๆ
             let statusBadge = 'bg-gray-200 text-gray-700';
             let statusText = (order.status || 'N/A').toUpperCase();
             
@@ -43,4 +48,27 @@ async function loadOrderHistory() {
         console.error("Error loading history:", err);
         tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 font-bold py-8">ดึงข้อมูลไม่สำเร็จ (เซิร์ฟเวอร์มีปัญหา)</td></tr>`;
     }
+}
+
+// 💡 ฟังก์ชันค้นหา
+window.applyDateFilter = function() {
+    const start = document.getElementById('start-date').value;
+    const end = document.getElementById('end-date').value;
+
+    if (!start || !end) {
+        alert('กรุณาเลือกวันที่ให้ครบทั้งสองช่องนะครับ!');
+        return;
+    }
+    
+    // โหลดข้อมูลใหม่ตามวันที่ๆ เลือก
+    loadOrderHistory(start, end);
+}
+
+// 💡 ฟังก์ชันล้างค่า
+window.clearDateFilter = function() {
+    document.getElementById('start-date').value = '';
+    document.getElementById('end-date').value = '';
+    
+    // โหลดข้อมูลแบบปกติ (ทั้งหมด)
+    loadOrderHistory();
 }

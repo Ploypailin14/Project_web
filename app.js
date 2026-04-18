@@ -361,18 +361,32 @@ app.put('/admin/customer-session/:id', (req, res) => {
     });
 });
 
-// 11.2 Get all Order History
+// 11.2 Get all Order History (อัปเดต: รองรับการกรองวันที่)
 app.get('/admin/orders', (req, res) => {
+    const { startDate, endDate } = req.query;
+    let whereClause = "";
+    let queryParams = [];
+
+    // ถ้ามีการส่งวันที่มาให้ค้นหา
+    if (startDate && endDate) {
+        whereClause = "WHERE ot.order_time BETWEEN ? AND ?";
+        const startDateTime = `${startDate} 00:00:00`;
+        const endDateTime = `${endDate} 23:59:59`;
+        queryParams = [startDateTime, endDateTime];
+    }
+
     const sql = `
         SELECT ot.order_id, ot.customer_id, ot.status, ot.order_time,
             GROUP_CONCAT(CONCAT(mi.name, ' (x', oi.quantity, ')') SEPARATOR ', ') as items
         FROM order_table ot
         JOIN order_item oi ON ot.order_id = oi.order_id
         JOIN menu_item mi ON oi.menu_id = mi.menu_id
+        ${whereClause}
         GROUP BY ot.order_id
         ORDER BY ot.order_time DESC
     `;
-    con.query(sql, (err, results) => {
+    
+    con.query(sql, queryParams, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json(results);
     });
