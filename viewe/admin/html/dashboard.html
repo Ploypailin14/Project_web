@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Stats</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col m-0 font-sans">
 
@@ -19,25 +20,29 @@
     <main style="background-image: url('/public/image/BG.png');" 
           class="flex-1 bg-cover bg-center bg-blend-overlay bg-gradient-to-b from-[#db8b22] to-[#382c21] p-8 flex flex-col items-center w-full">
         
-        <div class="w-full max-w-5xl flex flex-col gap-8 mt-4">
+        <div class="w-full max-w-5xl flex flex-col gap-6 mt-4">
             
-            <div class="bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-lg flex flex-wrap items-center justify-center gap-4 border border-white/50">
-                <div class="flex items-center gap-2">
+            <div class="bg-white/95 backdrop-blur-sm p-4 rounded-2xl shadow-lg flex flex-wrap items-center justify-center gap-4 border border-white/50 w-full max-w-4xl mx-auto">
+                
+                <div class="flex gap-2 border-r-2 border-gray-200 pr-4">
+                    <button onclick="loadAllTime()" class="btn btn-sm bg-purple-500 hover:bg-purple-600 text-white border-none font-bold shadow-sm">🌟 All Time</button>
+                    <button onclick="loadToday()" class="btn btn-sm bg-blue-500 hover:bg-blue-600 text-white border-none font-bold shadow-sm">📅 วันนี้</button>
+                </div>
+
+                <div class="flex items-center gap-2 pl-2">
                     <label for="start-date" class="font-bold text-gray-700">ตั้งแต่:</label>
-                    <input type="date" id="start-date" class="input input-bordered input-sm bg-white text-black border-gray-300">
+                    <input type="date" id="start-date" class="input input-bordered input-sm bg-white text-black font-bold">
                 </div>
                 <div class="flex items-center gap-2">
                     <label for="end-date" class="font-bold text-gray-700">ถึง:</label>
-                    <input type="date" id="end-date" class="input input-bordered input-sm bg-white text-black border-gray-300">
+                    <input type="date" id="end-date" class="input input-bordered input-sm bg-white text-black font-bold">
                 </div>
-                <button onclick="applyDateFilter()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-1 px-4 rounded-lg transition-colors shadow-md">
-                    🔍 Search
-                </button>
-                <button onclick="clearDateFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1 px-4 rounded-lg transition-colors shadow-md">
-                    ❌ Clear
-                </button>
+                <button onclick="applyDateFilter()" class="btn btn-sm bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 border-none shadow-sm">🔍 ค้นหา</button>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <h2 id="current-filter-title" class="text-center text-white text-2xl font-bold drop-shadow-md mt-2">📊 แสดงข้อมูล: วันนี้</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2">
                 <div class="bg-white/95 backdrop-blur-sm rounded-2xl py-6 px-4 flex flex-col items-center justify-center shadow-xl border border-white/50 transform transition hover:-translate-y-1">
                     <div class="text-gray-500 font-bold text-lg mb-2">Customers</div>
                     <div class="text-black font-black text-4xl flex items-center gap-3">
