@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Records</title>
+    <title>Billing & Checkout</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -12,8 +12,8 @@
     <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-2xl p-6">
         <div class="flex justify-between items-center mb-6 border-b pb-4">
             <div>
-                <h1 class="text-3xl font-black text-gray-800">💸 Payment Records</h1>
-                <p class="text-sm text-gray-500 font-bold">ประวัติการรับชำระเงิน และแก้ไขยอดเงิน</p>
+                <h1 class="text-3xl font-black text-gray-800">💸 Cashier & Billing</h1>
+                <p class="text-sm text-gray-500 font-bold">จัดการบิลของโต๊ะที่ยังไม่ชำระเงิน (สามารถแก้ไขยอดก่อนรับเงินได้)</p>
             </div>
             <button onclick="window.location.href='/admin/page/welcome'" class="btn btn-ghost border-gray-300 text-gray-700 font-bold">◀ Back to Home</button>
         </div>
@@ -22,10 +22,10 @@
             <table class="table w-full">
                 <thead class="text-gray-600 bg-gray-100 font-bold text-sm">
                     <tr>
-                        <th>Payment ID</th>
-                        <th>Order ID</th>
-                        <th>Date & Time</th>
-                        <th class="text-right">Amount (฿)</th>
+                        <th>Table No.</th>
+                        <th>Customer ID</th>
+                        <th>Session Status</th>
+                        <th class="text-right">Total Amount (฿)</th>
                         <th class="text-center">Actions</th>
                     </tr>
                 </thead>

@@ -252,16 +252,27 @@ app.delete('/admin/menu/:id', (req, res) => {
 });
 
 // ==========================================
-// Dashboard & Payments
+// Dashboard & Payments (Cashier System)
 // ==========================================
 
-// 8. 💡 [อัปเดตใหม่] Get all payments (ดึง Order ID และข้อมูลลูกค้ามาโชว์ด้วย)
-app.get('/admin/payments', (req, res) => {
+// 8. ดึงรายการโต๊ะที่ "ยังไม่จ่ายเงิน"
+app.get('/admin/unpaid-bills', (req, res) => {
     const sql = `
-        SELECT p.payment_id, p.order_id, p.amount, p.payment_date, o.customer_id
-        FROM payment p
-        LEFT JOIN order_table o ON p.order_id = o.order_id
-        ORDER BY p.payment_date DESC
+        SELECT 
+            cs.customer_id, 
+            rt.table_number, 
+            cs.status as session_status,
+            MAX(ot.order_id) as order_id,
+            MAX(ot.custom_total) as custom_total,
+            IFNULL(SUM((mi.price + IFNULL(oi.extra_price, 0)) * oi.quantity), 0) as calculated_total
+        FROM customer_session cs
+        JOIN restaurant_table rt ON cs.table_id = rt.table_id
+        LEFT JOIN order_table ot ON cs.customer_id = ot.customer_id
+        LEFT JOIN order_item oi ON ot.order_id = oi.order_id
+        LEFT JOIN menu_item mi ON oi.menu_id = mi.menu_id
+        WHERE cs.status IN ('active', 'pending_payment')
+        GROUP BY cs.customer_id, rt.table_number, cs.status
+        ORDER BY rt.table_number ASC
     `;
     con.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -269,18 +280,13 @@ app.get('/admin/payments', (req, res) => {
     });
 });
 
-// 8.1 Edit Payment Amount
-app.put('/admin/payment/:id', (req, res) => {
-    const paymentId = req.params.id;
-    const { amount } = req.body;
-    
-    if (amount === undefined || amount === '') return res.status(400).json({ error: "Please provide the new amount" });
-
-    const sql = "UPDATE payment SET amount = ? WHERE payment_id = ?";
-    con.query(sql, [amount, paymentId], (err, result) => {
+// 8.1 API สำหรับแอดมินแก้ไขยอดรวม (แก้แล้วลูกค้าเห็นเลย)
+app.put('/admin/order/:id/custom-total', (req, res) => {
+    const { custom_total } = req.body;
+    const sql = "UPDATE order_table SET custom_total = ? WHERE order_id = ?";
+    con.query(sql, [custom_total, req.params.id], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (result.affectedRows === 0) return res.status(404).json({ message: `Payment ID ${paymentId} not found.` });
-        res.status(200).json({ message: "Payment amount updated successfully!" });
+        res.status(200).json({ message: "อัปเดตยอดรวมสำเร็จ!" });
     });
 });
 
@@ -611,8 +617,8 @@ app.post('/customer/order', (req, res) => {
 });
 
 app.get('/customer/status/:customerId', (req, res) => {
-    // 💡 อัปเดต: เพิ่ม oi.extra และ oi.extra_price เข้ามาด้วย
-    const sql = `SELECT ot.status as order_status, mi.name, mi.price, oi.detail, oi.quantity, oi.extra, IFNULL(oi.extra_price, 0) as extra_price
+    // 💡 ดึง custom_total มาด้วย
+    const sql = `SELECT ot.status as order_status, ot.custom_total, mi.name, mi.price, oi.detail, oi.quantity, oi.extra, IFNULL(oi.extra_price, 0) as extra_price 
                  FROM order_table ot JOIN order_item oi ON ot.order_id = oi.order_id 
                  JOIN menu_item mi ON oi.menu_id = mi.menu_id 
                  WHERE ot.customer_id = ? ORDER BY ot.order_id DESC`;
