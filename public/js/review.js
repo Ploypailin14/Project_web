@@ -22,7 +22,7 @@ async function loadReviews() {
                 stars += `<span class="${i <= review.rating ? 'text-yellow-400' : 'text-gray-200'} text-lg">★</span>`;
             }
 
-            // 💡 พระเอกอยู่ตรงนี้: เช็คว่ารีวิวถูกซ่อนไหม ถ้าซ่อนให้ใส่คลาสเบลอ
+            // เช็คว่ารีวิวถูกซ่อนไหม ถ้าซ่อนให้ใส่คลาสเบลอ
             const isHidden = review.is_hidden === 1 || review.is_hidden === true;
             
             // ถ้าถูกซ่อน จะใส่เอฟเฟกต์เบลอ (blur-sm), ลดความทึบ (opacity-50) และกันลากคลุมข้อความ (select-none)
@@ -74,7 +74,7 @@ window.toggleHide = async function(id, is_hidden) {
             body: JSON.stringify({ is_hidden })
         });
         if (res.ok) {
-            loadReviews(); // โหลดหน้าใหม่เพื่อให้เอฟเฟกต์เบลอทำงาน
+            loadReviews(); 
         }
     } catch (err) {
         Swal.fire('ผิดพลาด', 'ไม่สามารถเปลี่ยนสถานะได้', 'error');
@@ -87,11 +87,17 @@ window.deleteReview = function(id) {
         text: "หากลบแล้วจะไม่สามารถกู้คืนรีวิวนี้ได้!",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#9ca3af',
         confirmButtonText: 'ใช่, ลบทิ้งเลย!',
         cancelButtonText: 'ยกเลิก',
-        customClass: { popup: 'rounded-[2rem]' }
+        
+        // 💡 พระเอกขี่ม้าขาว: บังคับสีปุ่มแก้ปัญหาปุ่มล่องหน
+        customClass: {
+            confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg mx-2 border-none',
+            cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg mx-2 border-none',
+            popup: 'rounded-[2rem]'
+        },
+        buttonsStyling: false // ปิดสไตล์เดิมทิ้ง
+        
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
