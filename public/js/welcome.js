@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adminNameDisplay.textContent = savedName.toUpperCase();
     }
 
-    // 2. ระบบ Logout แบบสวยงาม
+    // 2. ระบบ Logout แบบสวยงาม (แก้ปุ่มล่องหนแล้ว!)
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             Swal.fire({
@@ -16,10 +16,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 text: "คุณต้องการออกจากระบบใช่หรือไม่?",
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#9ca3af',
                 confirmButtonText: 'Yes, Logout',
-                cancelButtonText: 'Cancel'
+                cancelButtonText: 'Cancel',
+                
+                // 💡 ท่าไม้ตาย: บังคับสีปุ่มด้วย Tailwind ป้องกันอาการปุ่มล่องหน
+                customClass: {
+                    confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg mx-2 border-none',
+                    cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg mx-2 border-none',
+                    popup: 'rounded-[2rem]' // ขอบหน้าต่างมนๆ สวยๆ
+                },
+                buttonsStyling: false // ปิดสไตล์เดิมของ SweetAlert2 ทิ้งไปเลย
+                
             }).then((result) => {
                 if (result.isConfirmed) {
                     localStorage.removeItem('adminUsername');
