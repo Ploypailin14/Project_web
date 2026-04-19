@@ -30,18 +30,18 @@
     
     <div class="sticky top-0 z-50 shadow-lg">
         <div class="bg-[#d48806] p-5 flex justify-between items-center text-white">
-            <h2 class="text-xl font-bold">Menu List</h2>
+            <h2 class="text-xl font-bold">รายการอาหาร</h2>
             <div class="bg-white/20 px-4 py-1 rounded-full backdrop-blur-sm font-bold shadow-sm">
-                Table | <span id="displayTable">0</span>
+                โต๊ะ | <span id="displayTable">0</span>
             </div>
         </div>
 
         <div class="bg-[#f39c12] px-4 py-3 overflow-x-auto whitespace-nowrap flex gap-3 hide-scrollbar">
-            <button onclick="filterCategory('All', this)" class="cat-btn bg-white text-[#d48806] font-bold px-6 py-2 rounded-full shadow-sm transition-all duration-200">All</button>
-            <button onclick="filterCategory('Main Course', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">Main Course</button>
-            <button onclick="filterCategory('Appetizer', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">Appetizer</button>
-            <button onclick="filterCategory('Dessert', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">Dessert</button>
-            <button onclick="filterCategory('Beverage', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">Beverage</button>
+            <button onclick="filterCategory('All', this)" class="cat-btn bg-white text-[#d48806] font-bold px-6 py-2 rounded-full shadow-sm transition-all duration-200">ทั้งหมด</button>
+            <button onclick="filterCategory('Main Course', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">อาหารจานหลัก</button>
+            <button onclick="filterCategory('Appetizer', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">ของทานเล่น</button>
+            <button onclick="filterCategory('Dessert', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">ของหวาน</button>
+            <button onclick="filterCategory('Beverage', this)" class="cat-btn bg-white/20 text-white hover:bg-white/40 font-bold px-6 py-2 rounded-full transition-all duration-200">เครื่องดื่ม</button>
         </div>
     </div>
 
@@ -49,19 +49,28 @@
 
     <div class="fixed bottom-0 w-full bg-white p-4 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] flex justify-around rounded-t-[2rem] z-50">
         <button onclick="location.href='/menu'" class="flex flex-col items-center text-orange-500 font-bold">
-            <span class="text-2xl">🍴</span><span class="text-xs">Menu</span>
+            <span class="text-2xl">🍴</span><span class="text-xs">เมนู</span>
         </button>
         <button onclick="location.href='/cart'" class="flex flex-col items-center text-gray-400 font-bold hover:text-orange-500 transition">
-            <span class="text-2xl">🛒</span><span class="text-xs">Cart</span>
+            <span class="text-2xl">🛒</span><span class="text-xs">ตะกร้า</span>
         </button>
         <button onclick="location.href='/status'" class="flex flex-col items-center text-gray-400 font-bold hover:text-orange-500 transition">
-            <span class="text-2xl">📋</span><span class="text-xs">Status</span>
+            <span class="text-2xl">📋</span><span class="text-xs">สถานะ</span>
         </button>
     </div>
 
     <script>
         document.getElementById('displayTable').innerText = localStorage.getItem('tableNumber') || '?';
         let allMenuItems = [];
+
+        // 💡 ฟังก์ชันแปลภาษาหมวดหมู่สำหรับแสดงผล
+        const translateCat = (cat) => {
+            if(cat === 'Main Course') return 'อาหารจานหลัก';
+            if(cat === 'Appetizer') return 'ของทานเล่น';
+            if(cat === 'Dessert') return 'ของหวาน';
+            if(cat === 'Beverage') return 'เครื่องดื่ม';
+            return cat;
+        };
 
         async function loadMenu() {
             try {
@@ -74,7 +83,6 @@
             }
         }
 
-        // 💡 ฟังก์ชันเรนเดอร์เมนูที่ปรับปรุงใหม่ (มีเช็คสถานะเมนูหมด)
         function renderMenu(categoryToFilter) {
             const list = document.getElementById('menuList');
             const filteredItems = (categoryToFilter === 'All') 
@@ -88,23 +96,19 @@
             
             list.innerHTML = filteredItems.map(item => {
                 const validImageUrl = (item.image && item.image.trim() !== '') ? item.image : 'https://placehold.co/400x400/ffedd5/ea580c?text=No+Image';
-                
-                // 💡 เช็คว่าเมนูนี้มีขายอยู่ไหม
                 const isAvailable = item.status === 'available';
 
-                // 💡 แต่งสีการ์ด: ถ้าขายอยู่ให้สีปกติ ถ้าหมดให้เป็นสีเทาและขาวดำ
                 const cardStyle = isAvailable 
                     ? 'bg-white transform transition duration-300 hover:scale-[1.02]' 
                     : 'bg-gray-100 opacity-70 grayscale';
 
-                // 💡 แต่งชื่อเมนู: ถ้าหมดให้เติม (หมด) สีแดง
                 const menuNameHtml = isAvailable 
                     ? item.name 
                     : `${item.name} <span class="text-sm text-red-500 ml-1 font-black">(หมด)</span>`;
 
-                // 💡 แต่งปุ่ม: ถ้าหมดให้กดไม่ได้
+                // 💡 เปลี่ยนปุ่มเป็นภาษาไทย
                 const buttonHtml = isAvailable 
-                    ? `<button onclick="openOrderModal(${item.menu_id}, '${item.name}', ${item.price}, '${item.category}')" class="bg-[#f39c12] hover:bg-orange-600 text-white px-6 py-2 rounded-xl font-bold shadow-md active:scale-90 transition-all">+ Add</button>`
+                    ? `<button onclick="openOrderModal(${item.menu_id}, '${item.name}', ${item.price}, '${item.category}')" class="bg-[#f39c12] hover:bg-orange-600 text-white px-6 py-2 rounded-xl font-bold shadow-md active:scale-90 transition-all">+ เพิ่ม</button>`
                     : `<button disabled class="bg-gray-400 text-white px-6 py-2 rounded-xl font-bold cursor-not-allowed">หมด</button>`;
 
                 return `
@@ -112,7 +116,7 @@
                     <img src="${validImageUrl}" class="w-28 h-28 rounded-[1.5rem] object-cover border-4 border-orange-50 shadow-inner shrink-0">
                     <div class="ml-5 flex-1">
                         <h3 class="text-xl font-bold text-gray-800 leading-tight">${menuNameHtml}</h3>
-                        <p class="text-gray-400 text-xs font-semibold mt-1 bg-gray-200 inline-block px-2 py-0.5 rounded-md">${item.category}</p>
+                        <p class="text-gray-400 text-xs font-semibold mt-1 bg-gray-200 inline-block px-2 py-0.5 rounded-md">${translateCat(item.category)}</p>
                         <div class="flex justify-between items-center mt-3">
                             <span class="text-2xl font-black text-[#d48806]">${item.price}฿</span>
                             ${buttonHtml}
@@ -152,8 +156,8 @@
                 showCancelButton: true,
                 confirmButtonColor: '#f39c12',
                 cancelButtonColor: '#d33',
-                confirmButtonText: 'Add to Cart',
-                cancelButtonText: 'Cancel',
+                confirmButtonText: 'เพิ่มลงตะกร้า', // 💡 แปลไทย
+                cancelButtonText: 'ยกเลิก',       // 💡 แปลไทย
                 customClass: { popup: 'rounded-[2rem]' },
                 preConfirm: () => {
                     const extraCheckbox = document.getElementById('swal-extra');
@@ -197,7 +201,6 @@
         
         loadMenu();
 
-       // ระบบเช็คสถานะโต๊ะอัตโนมัติ
         function checkSessionStatus() {
             const custId = localStorage.getItem('customerId');
             if (!custId) return;

@@ -18,12 +18,12 @@
             กลับ
         </button>
 
-        <h1 class="text-3xl font-black text-center text-[#1e293b] mt-1">Your Orders</h1>
+        <h1 class="text-3xl font-black text-center text-[#1e293b] mt-1">รายการอาหารที่สั่ง</h1>
         
         <div class="flex justify-center gap-6 mt-4 text-sm font-bold text-black">
-            <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-yellow-400 shadow-sm"></span> Pending</div>
-            <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-blue-500 shadow-sm"></span> Cooking</div>
-            <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-green-500 shadow-sm"></span> Served</div>
+            <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-yellow-400 shadow-sm"></span> รอคิว</div>
+            <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-blue-500 shadow-sm"></span> กำลังทำ</div>
+            <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-green-500 shadow-sm"></span> เสิร์ฟแล้ว</div>
         </div>
     </div>
 
@@ -38,7 +38,7 @@
             </div>
             
             <button onclick="goToPayment()" class="w-full bg-[#ea580c] hover:bg-orange-700 text-white font-bold py-4 rounded-xl text-xl shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98]">
-                ชำระเงิน (Check Bill)
+                ชำระเงิน
             </button>
         </div>
     </div>
@@ -83,16 +83,16 @@
 
                     let borderColor = 'border-yellow-400';
                     let textColor = 'text-yellow-500';
-                    let statusText = 'Pending';
+                    let statusText = 'รอคิว'; // 💡 แปลไทย
 
                     if (item.order_status === 'cooking') {
                         borderColor = 'border-blue-500';
                         textColor = 'text-blue-500';
-                        statusText = 'Cooking';
+                        statusText = 'กำลังทำ'; // 💡 แปลไทย
                     } else if (item.order_status === 'served') {
                         borderColor = 'border-green-500';
                         textColor = 'text-green-500';
-                        statusText = 'Served';
+                        statusText = 'เสิร์ฟแล้ว'; // 💡 แปลไทย
                     }
 
                     let noteDisplay = item.detail || '-';
@@ -104,8 +104,7 @@
                         <div class="bg-white rounded-2xl p-5 flex justify-between items-center shadow-sm border-l-[6px] ${borderColor}">
                             <div>
                                 <h3 class="font-bold text-xl text-gray-800">${item.name}</h3>
-                                <p class="text-gray-400 text-sm mt-1">Note: ${noteDisplay}</p>
-                            </div>
+                                <p class="text-gray-400 text-sm mt-1">เพิ่มเติม: ${noteDisplay}</p> </div>
                             <div class="text-right">
                                 <div class="${textColor} text-xs font-black tracking-widest uppercase mb-1">${statusText}</div>
                                 <div class="text-orange-500 font-black text-2xl">x${qty}</div>
@@ -152,7 +151,6 @@
             window.location.href = `/customer/payment?total=${currentTotal}&id=${currentOrderId}`;
         }
 
-       // 💡 ระบบเช็คสถานะโต๊ะอัตโนมัติ (เช็คโดนเตะ + เช็คย้ายโต๊ะ)
         function checkSessionStatus() {
             const custId = localStorage.getItem('customerId');
             if (!custId) return;
@@ -160,7 +158,6 @@
             fetch(`/customer/check-session/${custId}`)
                 .then(res => res.json())
                 .then(data => {
-                    // 1. ถ้าแอดมินปิดโต๊ะ
                     if (data.status === 'closed' || data.status === 'not_found') {
                         localStorage.removeItem('customerId');
                         localStorage.removeItem('cart'); 
@@ -174,12 +171,10 @@
                             allowEscapeKey: false
                         }).then(() => window.location.href = '/');
                     } 
-                    // 2. ถ้าเซสชันยังอยู่ ให้อัปเดตเบอร์โต๊ะแบบ Real-time เผื่อแอดมินย้ายโต๊ะให้
                     else if (data.status === 'active' || data.status === 'pending_payment') {
                         if (data.table_number) {
-                            localStorage.setItem('tableNumber', data.table_number); // อัปเดตในความจำ
+                            localStorage.setItem('tableNumber', data.table_number); 
                             
-                            // ถ้าอยู่ในหน้า menu.html ให้เปลี่ยนตัวเลขโชว์มุมขวาบนทันที
                             const displayTable = document.getElementById('displayTable');
                             if (displayTable && displayTable.innerText !== data.table_number.toString()) {
                                 displayTable.innerText = data.table_number;
@@ -190,7 +185,6 @@
                 .catch(err => console.error("Session check error:", err));
         }
 
-        // สั่งให้คอยเช็คสถานะทุกๆ 3 วินาที
         setInterval(checkSessionStatus, 3000);
         checkSessionStatus();
     </script>
