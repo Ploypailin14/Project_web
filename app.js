@@ -339,7 +339,9 @@ app.get('/admin/dashboard', (req, res) => {
 app.get('/admin/customer-sessions', (req, res) => {
     const sql = `
         SELECT 
-            cs.customer_id, cs.table_id, cs.login_time, cs.status,
+            cs.customer_id, cs.login_time, cs.status,
+            rt.table_number, -- 💡 ดึงเบอร์โต๊ะจริงๆ มาโชว์
+            rt.table_id,
             IFNULL(SUM(p.amount), 0) as total_amount,
             (
                 SELECT GROUP_CONCAT(CONCAT(mi.name, ' (x', oi.quantity, ')') SEPARATOR ', ')
@@ -349,6 +351,7 @@ app.get('/admin/customer-sessions', (req, res) => {
                 WHERE ot.customer_id = cs.customer_id
             ) as ordered_items
         FROM customer_session cs
+        LEFT JOIN restaurant_table rt ON cs.table_id = rt.table_id
         LEFT JOIN order_table ot ON cs.customer_id = ot.customer_id
         LEFT JOIN payment p ON ot.order_id = p.order_id
         GROUP BY cs.customer_id
@@ -361,16 +364,27 @@ app.get('/admin/customer-sessions', (req, res) => {
     });
 });
 
-// 11.1 Edit Customer Session
+// 11.1 Edit Customer Session (แอดมินย้ายโต๊ะให้ลูกค้า)
 app.put('/admin/customer-session/:id', (req, res) => {
-    const { table_id, status } = req.body;
-    if (!table_id || !status) return res.status(400).json({ error: "Please provide both table_id and status" });
+    // 💡 รับค่าเบอร์โต๊ะที่แอดมินพิมพ์เข้ามา
+    const { table_id: inputTableNumber, status } = req.body; 
+    if (!inputTableNumber || !status) return res.status(400).json({ error: "Please provide both table number and status" });
 
-    const sql = "UPDATE customer_session SET table_id = ?, status = ? WHERE customer_id = ?";
-    con.query(sql, [table_id, status, req.params.id], (err, result) => {
+    // 1. ค้นหา ID แถวของจริง จากเบอร์โต๊ะที่แอดมินพิมพ์
+    const checkTableSql = "SELECT table_id FROM restaurant_table WHERE table_number = ?";
+    con.query(checkTableSql, [inputTableNumber], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (result.affectedRows === 0) return res.status(404).json({ message: "Customer session not found" });
-        res.status(200).json({ message: "Customer session updated successfully!" });
+        if (results.length === 0) return res.status(404).json({ error: "ไม่พบเบอร์โต๊ะนี้ในระบบครับ" });
+
+        const realTableId = results[0].table_id;
+
+        // 2. อัปเดตข้อมูลเซสชันด้วย ID ของจริง
+        const sql = "UPDATE customer_session SET table_id = ?, status = ? WHERE customer_id = ?";
+        con.query(sql, [realTableId, status, req.params.id], (err2, result) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            if (result.affectedRows === 0) return res.status(404).json({ message: "Customer session not found" });
+            res.status(200).json({ message: "Customer session updated successfully!" });
+        });
     });
 });
 
