@@ -1,31 +1,43 @@
 const API_BASE_URL = ''; 
 
-// 💡 [เพิ่มใหม่] เช็คสถานะการล็อกอินทันทีที่เปิดเว็บ หรือกด Refresh
+// 💡 1. ระบบเช็คสถานะการล็อกอินอัตโนมัติ
 document.addEventListener('DOMContentLoaded', () => {
     const cookToken = localStorage.getItem('cookToken');
     
     if (cookToken) {
-        // ถ้ามี Token อยู่แล้ว ให้ข้ามหน้า Login ไปที่หน้า Orders เลย
-        document.getElementById('login-page').classList.add('hidden');
+        // ถ้ามี Token อยู่แล้ว ให้ซ่อนหน้า Login และโชว์ Navbar + ไปหน้า Orders เลย
+        document.getElementById('login-page').style.display = 'none';
         document.getElementById('main-nav').style.display = 'flex';
         showPage('orders');
     } else {
-        // ถ้ายังไม่มี ให้โชว์หน้า Login ตามปกติ
-        document.getElementById('login-page').style.opacity = "1";
-        document.getElementById('login-page').classList.remove('hidden');
+        // ถ้ายังไม่มี ให้โชว์หน้า Login แบบ flex (กันโดน CSS ซ่อน)
+        const loginPage = document.getElementById('login-page');
+        loginPage.style.display = 'flex';
+        loginPage.classList.remove('hidden');
+        loginPage.style.opacity = "1";
     }
 });
 
+// 💡 2. ระบบเปลี่ยนหน้าต่าง (แก้ปัญหาจอล่องหนเด็ดขาด!)
 function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    // ซ่อนทุกหน้าให้หมดแบบเด็ดขาด (บังคับ style.display)
+    document.querySelectorAll('.page').forEach(p => {
+        p.classList.add('hidden');
+        p.style.display = 'none'; 
+    });
     
     document.querySelectorAll('.nav-links a').forEach(a => {
         a.classList.remove('text-orange-500', 'border-orange-500');
         a.classList.add('text-gray-400', 'border-transparent');
     });
     
+    // โชว์หน้าเป้าหมายแบบบังคับ
     const targetPage = document.getElementById(pageId);
-    if (targetPage) targetPage.classList.remove('hidden');
+    if (targetPage) {
+        targetPage.classList.remove('hidden');
+        // ถ้าเป็นหน้า login ให้จัดแบบ flex, หน้าอื่นจัดแบบ block
+        targetPage.style.display = (pageId === 'login-page') ? 'flex' : 'block';
+    }
     
     const navItem = document.getElementById('nav-' + pageId);
     if (navItem) {
@@ -71,11 +83,15 @@ function logout() {
     }).then((result) => {
         if (result.isConfirmed) {
             document.getElementById('main-nav').style.display = 'none';
-            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.page').forEach(p => {
+                p.classList.add('hidden');
+                p.style.display = 'none';
+            });
             document.getElementById('cook-id-input').value = '';
             document.getElementById('password-input').value = '';
             
             const loginPage = document.getElementById('login-page');
+            loginPage.style.display = 'flex';
             loginPage.classList.remove('hidden');
             loginPage.style.opacity = "1";
             
@@ -85,7 +101,7 @@ function logout() {
 }
 
 // ==========================================
-// 1. ระบบยืนยันตัวตน
+// 3. ระบบยืนยันตัวตน
 // ==========================================
 async function handleAuth() {
     const cookId = document.getElementById('cook-id-input').value;
@@ -116,10 +132,9 @@ async function handleAuth() {
             
             if (res.status === 200 && result.token) {
                 localStorage.setItem('cookToken', result.token); 
-                document.getElementById('login-page').classList.add('hidden');
+                document.getElementById('login-page').style.display = 'none';
                 document.getElementById('main-nav').style.display = 'flex';
                 showPage('orders');
-                document.getElementById('login-page').style.opacity = "1";
             } else {
                 fireAlert('เข้าสู่ระบบล้มเหลว', result.message || 'รหัสผ่านไม่ถูกต้อง', 'error', 'bg-red-500 hover:bg-red-600');
                 document.getElementById('login-page').style.opacity = "1";
@@ -154,15 +169,17 @@ async function handleAuth() {
 }
 
 // ==========================================
-// 2. ระบบดึงข้อมูลออเดอร์
+// 4. ระบบดึงข้อมูลออเดอร์เข้าครัว
 // ==========================================
 async function fetchActiveOrders() {
     try {
         const res = await fetch(`${API_BASE_URL}/cook/orders`);
         const orders = await res.json();
         
+        // 💡 เพิ่มระบบดักจับ Error กรณี Backend ฐานข้อมูลมีปัญหา
         if (!res.ok || !Array.isArray(orders)) {
             console.error("Backend Error:", orders);
+            document.getElementById('orders-container').innerHTML = '<div class="col-span-full text-center text-red-500 text-xl font-bold bg-white/90 p-10 rounded-3xl backdrop-blur-sm">⚠️ ระบบมีปัญหา: ไม่สามารถดึงข้อมูลออเดอร์ได้ (เช็ค API หรือ Database)</div>';
             return;
         }
         
@@ -221,7 +238,7 @@ function renderOrders(orders) {
 }
 
 // ==========================================
-// 3. ระบบอัปเดตออเดอร์
+// 5. ระบบอัปเดตออเดอร์
 // ==========================================
 async function updateOrderStatusDB(orderId, newStatus) {
     const btn = event.target;
@@ -258,7 +275,7 @@ async function updateOrderStatusDB(orderId, newStatus) {
 }
 
 // ==========================================
-// 4. ระบบแดชบอร์ด & รีวิว
+// 6. ระบบแดชบอร์ด & รีวิว
 // ==========================================
 async function fetchDashboard() {
     try {

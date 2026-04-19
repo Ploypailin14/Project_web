@@ -838,7 +838,7 @@ app.post("/cook/login", (req, res) => {
     });
 });
 
-// 💡 อัปเดต: ดึงออเดอร์เข้าครัว (แสดงเบอร์โต๊ะจริง + คำสั่งพิเศษ)
+// 💡 อัปเดต: ดึงออเดอร์เข้าครัว (คัดกรองเฉพาะโต๊ะที่ยังไม่ถูกปิดเท่านั้น!)
 app.get("/cook/orders", (req, res) => {
     const sql = `
         SELECT 
@@ -856,6 +856,7 @@ app.get("/cook/orders", (req, res) => {
         LEFT JOIN order_item oi ON o.order_id = oi.order_id 
         LEFT JOIN menu_item m ON oi.menu_id = m.menu_id
         WHERE o.status IN ('pending', 'cooking') 
+        AND cs.status != 'closed' -- 💡 พระเอกอยู่ตรงนี้: กรองเอาเฉพาะลูกค้าที่เซสชันยังไม่ถูกปิด
         ORDER BY o.order_time ASC
     `;
     con.query(sql, (err, results) => {
@@ -867,7 +868,7 @@ app.get("/cook/orders", (req, res) => {
                 ordersMap[oid] = { order_id: oid, table_no: row.table_no || "?", status: row.status, order_time: row.order_time, items: [] };
             }
             if (row.menu_name) {
-                // 💡 นำคำสั่งพิเศษมารวมกับ Note เพื่อให้พ่อครัวเห็นชัดๆ
+                // นำคำสั่งพิเศษมารวมกับ Note เพื่อให้พ่อครัวเห็นชัดๆ
                 let extraText = (row.extra && row.extra !== '') ? `[พิเศษ: ${row.extra}] ` : '';
                 let baseNote = (row.note && row.note !== '-') ? `(${row.note})` : '';
                 let finalNote = `${extraText}${baseNote}`.trim();
@@ -882,7 +883,6 @@ app.get("/cook/orders", (req, res) => {
         res.status(200).json(Object.values(ordersMap));
     });
 });
-
 app.put("/cook/order/:id", (req, res) => {
     const order_id = req.params.id;
     const { status, cook_id } = req.body;
