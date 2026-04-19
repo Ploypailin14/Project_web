@@ -364,9 +364,9 @@ app.get('/admin/customer-sessions', (req, res) => {
     });
 });
 
-// 11.1 Edit Customer Session (แอดมินย้ายโต๊ะให้ลูกค้า)
+// 11.1 Edit Customer Session (แอดมินย้ายโต๊ะให้ลูกค้า หรือ ปิดโต๊ะ)
 app.put('/admin/customer-session/:id', (req, res) => {
-    // 💡 รับค่าเบอร์โต๊ะที่แอดมินพิมพ์เข้ามา
+    // รับค่าเบอร์โต๊ะที่แอดมินพิมพ์เข้ามา
     const { table_id: inputTableNumber, status } = req.body; 
     if (!inputTableNumber || !status) return res.status(400).json({ error: "Please provide both table number and status" });
 
@@ -378,12 +378,32 @@ app.put('/admin/customer-session/:id', (req, res) => {
 
         const realTableId = results[0].table_id;
 
-        // 2. อัปเดตข้อมูลเซสชันด้วย ID ของจริง
-        const sql = "UPDATE customer_session SET table_id = ?, status = ? WHERE customer_id = ?";
-        con.query(sql, [realTableId, status, req.params.id], (err2, result) => {
-            if (err2) return res.status(500).json({ error: err2.message });
-            if (result.affectedRows === 0) return res.status(404).json({ message: "Customer session not found" });
-            res.status(200).json({ message: "Customer session updated successfully!" });
+        // 💡 2. ดึงข้อมูลโต๊ะเดิมของลูกค้าออกมาก่อน (เผื่อกรณีแอดมินย้ายโต๊ะ)
+        const getOldTableSql = "SELECT table_id FROM customer_session WHERE customer_id = ?";
+        con.query(getOldTableSql, [req.params.id], (errOld, oldRes) => {
+            const oldTableId = oldRes.length > 0 ? oldRes[0].table_id : null;
+
+            // 3. อัปเดตข้อมูลเซสชันด้วย ID ของจริง
+            const sql = "UPDATE customer_session SET table_id = ?, status = ? WHERE customer_id = ?";
+            con.query(sql, [realTableId, status, req.params.id], (err2, result) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                if (result.affectedRows === 0) return res.status(404).json({ message: "Customer session not found" });
+
+                // 💡 4. จัดการสถานะโต๊ะ
+                // ถ้าแอดมินเลือก Closed โต๊ะต้องกลายเป็น Available (ว่าง) แต่ถ้า Active ต้องเป็น Occupied
+                let newTableStatus = (status === 'closed') ? 'available' : 'occupied';
+
+                const updateNewTableSql = "UPDATE restaurant_table SET status = ? WHERE table_id = ?";
+                con.query(updateNewTableSql, [newTableStatus, realTableId], () => {
+
+                    // 💡 5. ถ้าย้ายโต๊ะ (โต๊ะเก่าไม่ตรงกับโต๊ะใหม่) ให้เคลียร์โต๊ะเก่าให้ว่างทันที
+                    if (oldTableId && oldTableId !== realTableId) {
+                        con.query("UPDATE restaurant_table SET status = 'available' WHERE table_id = ?", [oldTableId]);
+                    }
+
+                    res.status(200).json({ message: "อัปเดตข้อมูลลูกค้าและสถานะโต๊ะสำเร็จ!" });
+                });
+            });
         });
     });
 });
