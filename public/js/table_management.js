@@ -44,7 +44,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const table_number = document.getElementById('new-table-no').value;
         
         if (!table_number) {
-            Swal.fire('แจ้งเตือน', 'Please enter a table number', 'warning');
+            // 💡 แก้ปุ่มล่องหนตอนลืมใส่เลขโต๊ะ
+            Swal.fire({
+                title: 'แจ้งเตือน',
+                text: 'โปรดเพิ่มจำนวน',
+                icon: 'warning',
+                confirmButtonText: 'ตกลง',
+                customClass: { confirmButton: 'bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg' },
+                buttonsStyling: false
+            });
             return;
         }
 
@@ -61,10 +69,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadTables();
             } else {
                 const error = await res.json();
-                Swal.fire('ผิดพลาด', error.message || 'ไม่สามารถเพิ่มโต๊ะได้', 'error');
+                // 💡 แก้ปุ่มล่องหนตอน API แจ้งผิดพลาด
+                Swal.fire({
+                    title: 'ผิดพลาด',
+                    text: error.message || 'ไม่สามารถเพิ่มโต๊ะได้',
+                    icon: 'error',
+                    confirmButtonText: 'ตกลง',
+                    customClass: { confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg' },
+                    buttonsStyling: false
+                });
             }
         } catch (error) {
-            Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
+            Swal.fire({
+                title: 'Error',
+                text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์',
+                icon: 'error',
+                confirmButtonText: 'ตกลง',
+                customClass: { confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg' },
+                buttonsStyling: false
+            });
         }
     });
 
@@ -95,14 +118,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadTables();
             } else {
                 const error = await res.json();
-                Swal.fire('ผิดพลาด', error.message || 'แก้ไขข้อมูลไม่ได้', 'error');
+                Swal.fire({
+                    title: 'ผิดพลาด',
+                    text: error.message || 'แก้ไขข้อมูลไม่ได้',
+                    icon: 'error',
+                    confirmButtonText: 'ตกลง',
+                    customClass: { confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg' },
+                    buttonsStyling: false
+                });
             }
         } catch (error) {
-            Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
+            Swal.fire({
+                title: 'Error',
+                text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์',
+                icon: 'error',
+                confirmButtonText: 'ตกลง',
+                customClass: { confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg' },
+                buttonsStyling: false
+            });
         }
     });
 
-   // 5. Delete Table (อัปเดตแก้ปุ่มล่องหน)
+   // 5. Delete Table
     window.deleteTable = (id) => {
         Swal.fire({
             title: 'Are you sure?',
@@ -111,24 +148,37 @@ document.addEventListener('DOMContentLoaded', () => {
             showCancelButton: true,
             confirmButtonText: 'ใช่, ลบเลย',
             cancelButtonText: 'ยกเลิก',
-            // 💡 ท่าไม้ตาย: บังคับสีปุ่มด้วย Tailwind
             customClass: {
                 confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg mx-2',
                 cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg mx-2'
             },
-            buttonsStyling: false // ปิดสไตล์เดิมเพื่อให้ Tailwind ทำงาน 100%
+            buttonsStyling: false 
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
                     const res = await fetch(`/admin/table/${id}`, { method: 'DELETE' });
                     if (res.ok) {
                         Swal.fire({ icon: 'success', title: 'ลบสำเร็จ!', showConfirmButton: false, timer: 1000 });
-                        loadTables(); // โหลดรายการโต๊ะใหม่
+                        loadTables();
                     } else {
-                        Swal.fire('Error', 'ลบข้อมูลไม่สำเร็จ', 'error');
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'ลบข้อมูลไม่สำเร็จ',
+                            icon: 'error',
+                            confirmButtonText: 'ตกลง',
+                            customClass: { confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg' },
+                            buttonsStyling: false
+                        });
                     }
                 } catch (error) {
-                    Swal.fire('Error', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์',
+                        icon: 'error',
+                        confirmButtonText: 'ตกลง',
+                        customClass: { confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg' },
+                        buttonsStyling: false
+                    });
                 }
             }
         });
