@@ -303,14 +303,15 @@ app.get('/admin/dashboard', (req, res) => {
         whereClauseReview = "WHERE DATE(review_time) = CURDATE()";
         whereClauseCustomer = "WHERE DATE(login_time) = CURDATE()";
     } else if (startDate && endDate) {
-        whereClausePayment = "WHERE payment_time BETWEEN ? AND ?";
-        whereClauseReview = "WHERE review_time BETWEEN ? AND ?";
-        whereClauseCustomer = "WHERE login_time BETWEEN ? AND ?";
-        const startDateTime = `${startDate} 00:00:00`;
-        const endDateTime = `${endDate} 23:59:59`;
-        queryParams = [startDateTime, endDateTime, startDateTime, endDateTime, startDateTime, endDateTime];
+        whereClausePayment = "WHERE DATE(payment_time) BETWEEN ? AND ?";
+        whereClauseReview = "WHERE DATE(review_time) BETWEEN ? AND ?";
+        whereClauseCustomer = "WHERE DATE(login_time) BETWEEN ? AND ?";
+        
+        // 💡 แก้ไข: ใช้ DATE() แทนการต่อ String เพื่อป้องกันปัญหา Timezone
+        queryParams = [startDate, endDate, startDate, endDate, startDate, endDate];
     }
 
+    // 💡 แก้ไข: ใช้ SELECT จาก (SELECT ...) เพื่อรวมผลลัพธ์จากหลายตารางอย่างถูกต้อง
     const sql = `
         SELECT 
             (SELECT COUNT(customer_id) FROM customer_session ${whereClauseCustomer}) as customer_count,
@@ -320,9 +321,12 @@ app.get('/admin/dashboard', (req, res) => {
     
     con.query(sql, queryParams, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        const customers = results[0].customer_count || 0;
-        const revenue = results[0].total_revenue || 0;
-        const rating = results[0].avg_rating || 0;
+        
+        // ถ้าไม่มีข้อมูลจะคืนค่า 0
+        const customers = results[0]?.customer_count || 0;
+        const revenue = results[0]?.total_revenue || 0;
+        const rating = results[0]?.avg_rating || 0;
+        
         res.status(200).json({ 
             customer_count: customers,
             total_revenue: parseInt(revenue), 
