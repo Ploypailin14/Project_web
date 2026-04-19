@@ -1,4 +1,20 @@
-const API_BASE_URL = ''; // 💡 ลบ http://localhost:3000 ออก ใช้ Path ปัจจุบันแทนป้องกัน Error
+const API_BASE_URL = ''; 
+
+// 💡 [เพิ่มใหม่] เช็คสถานะการล็อกอินทันทีที่เปิดเว็บ หรือกด Refresh
+document.addEventListener('DOMContentLoaded', () => {
+    const cookToken = localStorage.getItem('cookToken');
+    
+    if (cookToken) {
+        // ถ้ามี Token อยู่แล้ว ให้ข้ามหน้า Login ไปที่หน้า Orders เลย
+        document.getElementById('login-page').classList.add('hidden');
+        document.getElementById('main-nav').style.display = 'flex';
+        showPage('orders');
+    } else {
+        // ถ้ายังไม่มี ให้โชว์หน้า Login ตามปกติ
+        document.getElementById('login-page').style.opacity = "1";
+        document.getElementById('login-page').classList.remove('hidden');
+    }
+});
 
 function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -145,7 +161,6 @@ async function fetchActiveOrders() {
         const res = await fetch(`${API_BASE_URL}/cook/orders`);
         const orders = await res.json();
         
-        // 💡 ดักจับ Error ถ้าหลังบ้านส่งมาเป็นข้อความ ไม่ใช่อาเรย์
         if (!res.ok || !Array.isArray(orders)) {
             console.error("Backend Error:", orders);
             return;
@@ -160,7 +175,6 @@ async function fetchActiveOrders() {
 function renderOrders(orders) {
     const container = document.getElementById('orders-container');
     
-    // 💡 ป้องกันจอขาวโพลน ถ้าว่างจริงจะโชว์ป้ายนี้
     if (!orders || orders.length === 0) {
         container.innerHTML = '<div class="col-span-full text-center text-white text-2xl font-bold bg-white/10 p-10 rounded-3xl backdrop-blur-sm border border-white/20">🎉 ตอนนี้ไม่มีออเดอร์ค้างอยู่ครับ เยี่ยมมาก!</div>';
         return;
