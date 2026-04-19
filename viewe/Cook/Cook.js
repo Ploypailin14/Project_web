@@ -5,12 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const cookToken = localStorage.getItem('cookToken');
     
     if (cookToken) {
-        // ถ้ามี Token อยู่แล้ว ให้ซ่อนหน้า Login และโชว์ Navbar + ไปหน้า Orders เลย
         document.getElementById('login-page').style.display = 'none';
         document.getElementById('main-nav').style.display = 'flex';
         showPage('orders');
     } else {
-        // ถ้ายังไม่มี ให้โชว์หน้า Login แบบ flex (กันโดน CSS ซ่อน)
         const loginPage = document.getElementById('login-page');
         loginPage.style.display = 'flex';
         loginPage.classList.remove('hidden');
@@ -18,9 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 💡 2. ระบบเปลี่ยนหน้าต่าง (แก้ปัญหาจอล่องหนเด็ดขาด!)
+// 💡 2. ระบบเปลี่ยนหน้าต่าง
 function showPage(pageId) {
-    // ซ่อนทุกหน้าให้หมดแบบเด็ดขาด (บังคับ style.display)
     document.querySelectorAll('.page').forEach(p => {
         p.classList.add('hidden');
         p.style.display = 'none'; 
@@ -31,11 +28,9 @@ function showPage(pageId) {
         a.classList.add('text-gray-400', 'border-transparent');
     });
     
-    // โชว์หน้าเป้าหมายแบบบังคับ
     const targetPage = document.getElementById(pageId);
     if (targetPage) {
         targetPage.classList.remove('hidden');
-        // ถ้าเป็นหน้า login ให้จัดแบบ flex, หน้าอื่นจัดแบบ block
         targetPage.style.display = (pageId === 'login-page') ? 'flex' : 'block';
     }
     
@@ -176,10 +171,9 @@ async function fetchActiveOrders() {
         const res = await fetch(`${API_BASE_URL}/cook/orders`);
         const orders = await res.json();
         
-        // 💡 เพิ่มระบบดักจับ Error กรณี Backend ฐานข้อมูลมีปัญหา
         if (!res.ok || !Array.isArray(orders)) {
             console.error("Backend Error:", orders);
-            document.getElementById('orders-container').innerHTML = '<div class="col-span-full text-center text-red-500 text-xl font-bold bg-white/90 p-10 rounded-3xl backdrop-blur-sm">⚠️ ระบบมีปัญหา: ไม่สามารถดึงข้อมูลออเดอร์ได้ (เช็ค API หรือ Database)</div>';
+            document.getElementById('orders-container').innerHTML = '<div class="col-span-full text-center text-red-500 text-xl font-bold bg-white/90 p-10 rounded-3xl backdrop-blur-sm">⚠️ ระบบมีปัญหา: ไม่สามารถดึงข้อมูลออเดอร์ได้</div>';
             return;
         }
         
@@ -275,7 +269,7 @@ async function updateOrderStatusDB(orderId, newStatus) {
 }
 
 // ==========================================
-// 6. ระบบแดชบอร์ด & รีวิว
+// 6. ระบบแดชบอร์ด & รีวิว (อัปเดตแก้ไขซ่อนรีวิว + ปี ค.ศ.)
 // ==========================================
 async function fetchDashboard() {
     try {
@@ -320,9 +314,14 @@ async function fetchReviews() {
             const reviewsContainer = document.getElementById('reviews-list-container');
             reviewsContainer.innerHTML = ''; 
             
-            if (result.reviews && result.reviews.length > 0) {
-                result.reviews.forEach(review => {
-                    const dateTxt = review.createdAt ? new Date(review.createdAt).toLocaleString('th-TH') : '';
+            // 💡 1. กรองรีวิวที่ถูกซ่อน (is_hidden = 1 หรือ true) ออกไป ไม่เอามาโชว์
+            const visibleReviews = (result.reviews || []).filter(review => review.is_hidden != 1 && review.is_hidden !== true);
+            
+            if (visibleReviews.length > 0) {
+                visibleReviews.forEach(review => {
+                    // 💡 2. ใช้ .toLocaleString('en-GB') เพื่อแสดงเป็น ค.ศ.
+                    const dateTxt = review.createdAt ? new Date(review.createdAt).toLocaleString('en-GB').replace(',', '') : '';
+                    
                     reviewsContainer.innerHTML += `
                         <div class="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20 transform transition hover:-translate-y-1">
                             <div class="flex justify-between items-start mb-3">

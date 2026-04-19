@@ -892,7 +892,6 @@ app.post("/cook/register", async (req, res) => {
                 return res.status(400).json({ message: "Cook ID นี้ถูกลงทะเบียนไปแล้ว" });
             }
 
-            // 💡 แก้ไข: บันทึกแค่รหัสผ่านเท่านั้น ไม่ไปยุ่งกับสถานะ (ปล่อยให้เป็น inactive ตามเดิม)
             const updateSql = "UPDATE cook SET password = ? WHERE cook_id = ?";
             con.query(updateSql, [hashedPassword, cook_id], (err2, result) => {
                 if (err2) return res.status(500).json({ message: err2.message });
@@ -923,7 +922,6 @@ app.post("/cook/login", (req, res) => {
     });
 });
 
-// 💡 อัปเดต: ดึงออเดอร์เข้าครัว (คัดกรองเฉพาะโต๊ะที่ยังไม่ถูกปิดเท่านั้น!)
 app.get("/cook/orders", (req, res) => {
     const sql = `
         SELECT 
@@ -941,7 +939,7 @@ app.get("/cook/orders", (req, res) => {
         LEFT JOIN order_item oi ON o.order_id = oi.order_id 
         LEFT JOIN menu_item m ON oi.menu_id = m.menu_id
         WHERE o.status IN ('pending', 'cooking') 
-        AND cs.status != 'closed' -- 💡 พระเอกอยู่ตรงนี้: กรองเอาเฉพาะลูกค้าที่เซสชันยังไม่ถูกปิด
+        AND cs.status != 'closed' 
         ORDER BY o.order_time ASC
     `;
     con.query(sql, (err, results) => {
@@ -953,7 +951,6 @@ app.get("/cook/orders", (req, res) => {
                 ordersMap[oid] = { order_id: oid, table_no: row.table_no || "?", status: row.status, order_time: row.order_time, items: [] };
             }
             if (row.menu_name) {
-                // นำคำสั่งพิเศษมารวมกับ Note เพื่อให้พ่อครัวเห็นชัดๆ
                 let extraText = (row.extra && row.extra !== '') ? `[พิเศษ: ${row.extra}] ` : '';
                 let baseNote = (row.note && row.note !== '-') ? `(${row.note})` : '';
                 let finalNote = `${extraText}${baseNote}`.trim();
@@ -968,6 +965,7 @@ app.get("/cook/orders", (req, res) => {
         res.status(200).json(Object.values(ordersMap));
     });
 });
+
 app.put("/cook/order/:id", (req, res) => {
     const order_id = req.params.id;
     const { status, cook_id } = req.body;
@@ -993,20 +991,23 @@ app.get("/cook/dashboard", (req, res) => {
     });
 });
 
-// 💡 แก้ไข API ดึงรีวิว เพื่อให้โชว์ "เลขโต๊ะ (table_id)" แทนรหัสคิว
+// 💡 แก้ไข API ดึงรีวิว เพื่อไม่ให้โชว์รีวิวที่ถูกซ่อน (is_hidden = 1) 
 app.get("/api/get_reviews.php", (req, res) => {
-    const summarySql = `SELECT IFNULL(AVG(rating), 0) as average, COUNT(*) as total FROM review`;
+    // 💡 ให้คิดคะแนนเฉลี่ยจากเฉพาะรีวิวที่ไม่ได้ถูกซ่อน
+    const summarySql = `SELECT IFNULL(AVG(rating), 0) as average, COUNT(*) as total FROM review WHERE is_hidden = 0`;
     
-    // JOIN กับ customer_session เพื่อเอา cs.table_id มาแทน o.customer_id
+    // 💡 ดึงรีวิวมาเฉพาะที่ is_hidden = 0
     const reviewsSql = `
         SELECT 
             r.rating, 
             r.comment, 
             r.review_time as createdAt, 
-            cs.table_id as tableNo 
+            cs.table_id as tableNo,
+            r.is_hidden
         FROM review r 
         LEFT JOIN order_table o ON r.order_id = o.order_id 
         LEFT JOIN customer_session cs ON o.customer_id = cs.customer_id
+        WHERE r.is_hidden = 0
         ORDER BY r.review_time DESC
     `;
 
