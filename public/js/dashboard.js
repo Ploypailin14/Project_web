@@ -2,6 +2,15 @@ document.addEventListener('DOMContentLoaded', () => {
     loadToday(); // เปิดหน้ามาครั้งแรก ให้โหลดของ "วันนี้" เป็นค่าเริ่มต้น
 });
 
+// 💡 ฟังก์ชันช่วยหาวันที่ปัจจุบันตามเวลาเครื่องลูกค้า (รูปแบบ YYYY-MM-DD)
+function getLocalToday() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // ฟังก์ชันดูยอด "All Time"
 function loadAllTime() {
     document.getElementById('start-date').value = '';
@@ -14,21 +23,34 @@ function loadAllTime() {
 
 // ฟังก์ชันดูยอด "วันนี้"
 function loadToday() {
-    document.getElementById('start-date').value = '';
-    document.getElementById('end-date').value = '';
+    const todayStr = getLocalToday(); 
+    
+    document.getElementById('start-date').value = todayStr;
+    document.getElementById('end-date').value = todayStr;
     document.getElementById('current-filter-title').innerText = '📅 แสดงข้อมูล: วันนี้ (Today)';
     
-    loadDashboardStats('', '', 'today');
-    loadTopMenus('', '', 'today');
+    loadDashboardStats(todayStr, todayStr, 'custom');
+    loadTopMenus(todayStr, todayStr, 'custom');
 }
 
-// ฟังก์ชันกด "ค้นหา" แบบเลือกวันที่
+// ฟังก์ชันกด "ค้นหา" แบบเลือกวันที่ (แก้ปุ่มล่องหนแล้ว!)
 function applyDateFilter() {
     const start = document.getElementById('start-date').value;
     const end = document.getElementById('end-date').value;
 
     if (!start || !end) {
-        Swal.fire('แจ้งเตือน', 'กรุณาเลือกวันที่เริ่มต้นและสิ้นสุดให้ครบ', 'warning');
+        Swal.fire({
+            title: 'แจ้งเตือน',
+            text: 'กรุณาเลือกวันที่เริ่มต้นและสิ้นสุดให้ครบ',
+            icon: 'warning',
+            confirmButtonText: 'ตกลง',
+            // 💡 ท่าไม้ตาย: บังคับสีปุ่มแก้ปัญหาปุ่มล่องหนจาก DaisyUI
+            customClass: {
+                confirmButton: 'bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg border-none shadow-md transition-all',
+                popup: 'rounded-[2rem]'
+            },
+            buttonsStyling: false
+        });
         return;
     }
 
@@ -37,7 +59,7 @@ function applyDateFilter() {
     loadTopMenus(start, end, 'custom');
 }
 
-// โหลดตัวเลขสถิติ (อัปเดตรับพารามิเตอร์ filter)
+// โหลดตัวเลขสถิติ
 async function loadDashboardStats(startDate = '', endDate = '', filter = 'today') {
     try {
         let url = `/admin/dashboard?filter=${filter}`;
@@ -54,7 +76,7 @@ async function loadDashboardStats(startDate = '', endDate = '', filter = 'today'
     }
 }
 
-// โหลด Top 3 (อัปเดตรับพารามิเตอร์ filter)
+// โหลด 3 อันดับเมนูขายดี
 async function loadTopMenus(startDate = '', endDate = '', filter = 'today') {
     try {
         let url = `/admin/top-menus?filter=${filter}`;
@@ -64,8 +86,11 @@ async function loadTopMenus(startDate = '', endDate = '', filter = 'today') {
         const menus = await res.json();
         const container = document.getElementById('top-menu-container');
 
-        if (menus.length === 0) {
-            container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center text-gray-500 font-bold text-xl py-12 bg-white/90 rounded-3xl shadow-lg">ไม่มีข้อมูลการสั่งอาหารในช่วงเวลานี้ 🍽️</div>';
+        if (!menus || menus.length === 0) {
+            container.innerHTML = `
+                <div class="col-span-1 md:col-span-3 text-center text-gray-500 font-bold text-xl py-12 bg-white/90 rounded-3xl shadow-lg">
+                    ไม่มีข้อมูลการสั่งอาหารในช่วงเวลานี้ 🍽️
+                </div>`;
             return;
         }
 
@@ -83,9 +108,10 @@ async function loadTopMenus(startDate = '', endDate = '', filter = 'today') {
                 </div>
                 <img src="${validImageUrl}" class="w-full h-48 object-cover border-b border-gray-100">
                 <div class="text-center text-black font-black text-xl py-4 pb-1">${menu.name}</div>
-                <div class="text-center text-orange-600 text-sm pb-5 font-bold bg-orange-50/50 mx-4 mb-4 rounded-xl pt-2">ยอดขาย ${menu.total_sold} จาน</div>
-            </div>
-            `;
+                <div class="text-center text-orange-600 text-sm pb-5 font-bold bg-orange-50/50 mx-4 mb-4 rounded-xl pt-2">
+                    ยอดขาย ${menu.total_sold} จาน
+                </div>
+            </div>`;
         }).join('');
 
     } catch (error) {

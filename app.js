@@ -145,25 +145,29 @@ app.delete('/admin/cook/:id', (req, res) => {
 // ==========================================
 
 // 4.3 Get Top 3 Menus
+// 💡 อัปเดต API ดึงเมนูขายดี ให้กรองตามวันที่ (Today, All Time, Custom)
 app.get('/admin/top-menus', (req, res) => {
     const { startDate, endDate, filter } = req.query;
-    let whereClause = ""; 
+    
+    // สร้างตัวแปรรองรับเงื่อนไขวันที่
+    let whereClause = "";
     let queryParams = [];
 
     if (filter === 'today') {
-        whereClause = "WHERE DATE(ot.order_time) = CURDATE()"; 
+        whereClause = "WHERE DATE(o.order_time) = CURDATE()";
     } else if (startDate && endDate) {
-        whereClause = "WHERE ot.order_time BETWEEN ? AND ?";
-        const startDateTime = `${startDate} 00:00:00`;
-        const endDateTime = `${endDate} 23:59:59`;
-        queryParams = [startDateTime, endDateTime];
+        whereClause = "WHERE DATE(o.order_time) BETWEEN ? AND ?";
+        queryParams = [startDate, endDate];
     }
 
     const sql = `
-        SELECT m.menu_id, m.name, m.image, SUM(oi.quantity) as total_sold
+        SELECT 
+            m.name, 
+            m.image, 
+            SUM(oi.quantity) as total_sold
         FROM order_item oi
+        JOIN order_table o ON oi.order_id = o.order_id
         JOIN menu_item m ON oi.menu_id = m.menu_id
-        JOIN order_table ot ON oi.order_id = ot.order_id
         ${whereClause}
         GROUP BY m.menu_id, m.name, m.image
         ORDER BY total_sold DESC
@@ -171,10 +175,7 @@ app.get('/admin/top-menus', (req, res) => {
     `;
 
     con.query(sql, queryParams, (err, results) => {
-        if (err) {
-            console.error("SQL Error in top-menus:", err.message);
-            return res.status(500).json({ error: err.message });
-        }
+        if (err) return res.status(500).json({ error: err.message });
         res.status(200).json(results);
     });
 });
@@ -290,7 +291,7 @@ app.put('/admin/order/:id/custom-total', (req, res) => {
     });
 });
 
-// 9. Get Dashboard statistics
+// 9. Get Dashboard statistics (เวอร์ชันซ่อม 500 Error และชื่อคอลัมน์)
 app.get('/admin/dashboard', (req, res) => {
     const { startDate, endDate, filter } = req.query;
     let whereClausePayment = "";
@@ -298,20 +299,22 @@ app.get('/admin/dashboard', (req, res) => {
     let whereClauseCustomer = "";
     let queryParams = [];
 
-    if (filter === 'today') {
-        whereClausePayment = "WHERE DATE(payment_time) = CURDATE()"; 
-        whereClauseReview = "WHERE DATE(review_time) = CURDATE()";
-        whereClauseCustomer = "WHERE DATE(login_time) = CURDATE()";
-    } else if (startDate && endDate) {
-        whereClausePayment = "WHERE DATE(payment_time) BETWEEN ? AND ?";
-        whereClauseReview = "WHERE DATE(review_time) BETWEEN ? AND ?";
-        whereClauseCustomer = "WHERE DATE(login_time) BETWEEN ? AND ?";
-        
-        // 💡 แก้ไข: ใช้ DATE() แทนการต่อ String เพื่อป้องกันปัญหา Timezone
-        queryParams = [startDate, endDate, startDate, endDate, startDate, endDate];
+    if (filter !== 'all' && startDate && endDate) {
+        if (startDate === endDate) {
+            // 💡 แก้ไข: ใช้ชื่อคอลัมน์ให้ตรงกับ DB (payment_date)
+            whereClausePayment = "WHERE payment_date LIKE ?";
+            whereClauseReview = "WHERE review_time LIKE ?";
+            whereClauseCustomer = "WHERE login_time LIKE ?";
+            const exact = `${startDate}%`;
+            queryParams = [exact, exact, exact];
+        } else {
+            whereClausePayment = "WHERE DATE(payment_date) BETWEEN ? AND ?";
+            whereClauseReview = "WHERE DATE(review_time) BETWEEN ? AND ?";
+            whereClauseCustomer = "WHERE DATE(login_time) BETWEEN ? AND ?";
+            queryParams = [startDate, endDate, startDate, endDate, startDate, endDate];
+        }
     }
 
-    // 💡 แก้ไข: ใช้ SELECT จาก (SELECT ...) เพื่อรวมผลลัพธ์จากหลายตารางอย่างถูกต้อง
     const sql = `
         SELECT 
             (SELECT COUNT(customer_id) FROM customer_session ${whereClauseCustomer}) as customer_count,
@@ -320,18 +323,58 @@ app.get('/admin/dashboard', (req, res) => {
     `;
     
     con.query(sql, queryParams, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error("Dashboard SQL Error:", err); // พ่น error ลง terminal ให้ดูด้วย
+            return res.status(500).json({ error: err.message });
+        }
         
-        // ถ้าไม่มีข้อมูลจะคืนค่า 0
-        const customers = results[0]?.customer_count || 0;
-        const revenue = results[0]?.total_revenue || 0;
-        const rating = results[0]?.avg_rating || 0;
+        // 💡 ป้องกันค่า NULL (ถ้าไม่มีออเดอร์วันนี้ SUM จะเป็น NULL)
+        const row = results[0] || {};
+        const customers = row.customer_count || 0;
+        const revenue = row.total_revenue || 0;
+        const rating = row.avg_rating || 0;
         
         res.status(200).json({ 
             customer_count: customers,
-            total_revenue: parseInt(revenue), 
-            avg_rating: parseFloat(rating).toFixed(1) 
+            total_revenue: parseInt(revenue) || 0, 
+            avg_rating: parseFloat(rating || 0).toFixed(1) 
         });
+    });
+});
+
+// 10. Get Top Menus (แก้ปัญหา Timezone ให้ตรงกับ Dashboard)
+app.get('/admin/top-menus', (req, res) => {
+    const { startDate, endDate, filter } = req.query;
+    let whereClause = "";
+    let queryParams = [];
+
+    if (filter !== 'all' && startDate && endDate) {
+        if (startDate === endDate) {
+            whereClause = "WHERE o.order_time LIKE ?";
+            queryParams = [`${startDate}%`];
+        } else {
+            whereClause = "WHERE DATE(o.order_time) BETWEEN ? AND ?";
+            queryParams = [startDate, endDate];
+        }
+    }
+
+    const sql = `
+        SELECT 
+            m.name, 
+            m.image, 
+            SUM(oi.quantity) as total_sold
+        FROM order_item oi
+        JOIN order_table o ON oi.order_id = o.order_id
+        JOIN menu_item m ON oi.menu_id = m.menu_id
+        ${whereClause}
+        GROUP BY m.menu_id, m.name, m.image
+        ORDER BY total_sold DESC
+        LIMIT 3
+    `;
+
+    con.query(sql, queryParams, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(200).json(results);
     });
 });
 
