@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000'; 
+const API_BASE_URL = ''; // 💡 ลบ http://localhost:3000 ออก ใช้ Path ปัจจุบันแทนป้องกัน Error
 
 function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -47,7 +47,6 @@ function logout() {
         showCancelButton: true,
         confirmButtonText: 'ใช่, ออกจากระบบ',
         cancelButtonText: 'ยกเลิก',
-        // 💡 บังคับสีปุ่มแก้ปุ่มล่องหน
         customClass: {
             confirmButton: 'bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg mx-2',
             cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg mx-2'
@@ -77,7 +76,6 @@ async function handleAuth() {
     const password = document.getElementById('password-input').value;
     const btn = document.getElementById('submit-btn');
 
-    // 💡 ฟังก์ชันสร้าง Alert แบบไม่ล่องหน
     const fireAlert = (title, text, icon, btnColor) => {
         return Swal.fire({
             title: title, text: text, icon: icon, confirmButtonText: 'ตกลง',
@@ -127,7 +125,6 @@ async function handleAuth() {
             });
             const result = await res.json();
             if(res.status === 200) {
-                // 💡 แก้ไขปุ่มล่องหนตรงนี้เลยครับ!
                 fireAlert('สำเร็จ!', 'ลงทะเบียนตั้งรหัสผ่านเรียบร้อยแล้ว', 'success', 'bg-green-500 hover:bg-green-600');
                 toggleAuth('login');
             } else {
@@ -147,12 +144,23 @@ async function fetchActiveOrders() {
     try {
         const res = await fetch(`${API_BASE_URL}/cook/orders`);
         const orders = await res.json();
+        
+        // 💡 ดักจับ Error ถ้าหลังบ้านส่งมาเป็นข้อความ ไม่ใช่อาเรย์
+        if (!res.ok || !Array.isArray(orders)) {
+            console.error("Backend Error:", orders);
+            return;
+        }
+        
         renderOrders(orders);
-    } catch (e) { console.error("Fetch Orders Error:", e); }
+    } catch (e) { 
+        console.error("Fetch Orders Error:", e); 
+    }
 }
 
 function renderOrders(orders) {
     const container = document.getElementById('orders-container');
+    
+    // 💡 ป้องกันจอขาวโพลน ถ้าว่างจริงจะโชว์ป้ายนี้
     if (!orders || orders.length === 0) {
         container.innerHTML = '<div class="col-span-full text-center text-white text-2xl font-bold bg-white/10 p-10 rounded-3xl backdrop-blur-sm border border-white/20">🎉 ตอนนี้ไม่มีออเดอร์ค้างอยู่ครับ เยี่ยมมาก!</div>';
         return;
@@ -181,7 +189,10 @@ function renderOrders(orders) {
                 <div class="flex-1 space-y-3 mb-6">
                     ${(order.items || []).map(i => `
                         <div class="flex flex-col bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <span class="font-bold text-lg text-zinc-800">${i.name}</span>
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-lg text-zinc-800">${i.name}</span>
+                                <span class="text-orange-500 font-black text-xl">x${i.qty}</span>
+                            </div>
                             ${i.note ? `<span class="text-sm text-red-500 font-semibold mt-1">📝 Note: ${i.note}</span>` : ''}
                         </div>
                     `).join('')}

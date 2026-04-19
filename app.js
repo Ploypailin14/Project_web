@@ -797,18 +797,28 @@ app.post("/cook/login", (req, res) => {
     });
 });
 
+// 💡 อัปเดต: ดึงออเดอร์เข้าครัว (แสดงเบอร์โต๊ะจริง + คำสั่งพิเศษ)
 app.get("/cook/orders", (req, res) => {
     const sql = `
-        SELECT o.order_id, cs.table_id AS table_no, o.status, o.order_time, m.name AS menu_name, oi.quantity, oi.detail AS note 
+        SELECT 
+            o.order_id, 
+            rt.table_number AS table_no, 
+            o.status, 
+            o.order_time, 
+            m.name AS menu_name, 
+            oi.quantity, 
+            oi.detail AS note,
+            oi.extra 
         FROM order_table o 
         LEFT JOIN customer_session cs ON o.customer_id = cs.customer_id
+        LEFT JOIN restaurant_table rt ON cs.table_id = rt.table_id
         LEFT JOIN order_item oi ON o.order_id = oi.order_id 
         LEFT JOIN menu_item m ON oi.menu_id = m.menu_id
         WHERE o.status IN ('pending', 'cooking') 
         ORDER BY o.order_time ASC
     `;
     con.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ message: err.message });
+        if (err) return res.status(500).json({ error: err.message });
         const ordersMap = {};
         results.forEach(row => {
             const oid = row.order_id;
@@ -816,8 +826,16 @@ app.get("/cook/orders", (req, res) => {
                 ordersMap[oid] = { order_id: oid, table_no: row.table_no || "?", status: row.status, order_time: row.order_time, items: [] };
             }
             if (row.menu_name) {
-                let noteText = `x${row.quantity}${row.note ? ` (${row.note})` : ''}`;
-                ordersMap[oid].items.push({ name: row.menu_name, note: noteText });
+                // 💡 นำคำสั่งพิเศษมารวมกับ Note เพื่อให้พ่อครัวเห็นชัดๆ
+                let extraText = (row.extra && row.extra !== '') ? `[พิเศษ: ${row.extra}] ` : '';
+                let baseNote = (row.note && row.note !== '-') ? `(${row.note})` : '';
+                let finalNote = `${extraText}${baseNote}`.trim();
+                
+                ordersMap[oid].items.push({ 
+                    name: row.menu_name, 
+                    qty: row.quantity,
+                    note: finalNote 
+                });
             }
         });
         res.status(200).json(Object.values(ordersMap));
