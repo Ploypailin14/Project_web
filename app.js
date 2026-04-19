@@ -814,7 +814,8 @@ app.post("/cook/register", async (req, res) => {
                 return res.status(400).json({ message: "Cook ID นี้ถูกลงทะเบียนไปแล้ว" });
             }
 
-            const updateSql = "UPDATE cook SET password = ?, status = 'active' WHERE cook_id = ?";
+            // 💡 แก้ไข: บันทึกแค่รหัสผ่านเท่านั้น ไม่ไปยุ่งกับสถานะ (ปล่อยให้เป็น inactive ตามเดิม)
+            const updateSql = "UPDATE cook SET password = ? WHERE cook_id = ?";
             con.query(updateSql, [hashedPassword, cook_id], (err2, result) => {
                 if (err2) return res.status(500).json({ message: err2.message });
                 res.status(200).json({ message: "registered" });
