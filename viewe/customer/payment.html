@@ -9,63 +9,134 @@
 <body class="bg-gray-50 flex flex-col items-center p-6">
     <h1 class="text-2xl font-bold my-6">หน้าชำระเงิน</h1>
     <div class="bg-white w-full max-w-sm p-8 rounded-3xl shadow-lg text-center">
-        <p class="text-gray-500">ยอดเงินรวมทั้งสิ้น</p>
-        <h2 id="finalAmount" class="text-4xl font-black text-orange-600 my-4">0฿</h2>
+        <p class="text-gray-500 font-bold">ยอดเงินรวมทั้งสิ้น</p>
+        <h2 id="finalAmount" class="text-5xl font-black text-orange-600 my-4 drop-shadow-sm">0฿</h2>
+        
         <div class="space-y-3 mt-8 text-left">
-            <p class="font-bold">เลือกวิธีชำระ:</p>
-            <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:bg-orange-50">
-                <input type="radio" name="method" value="Cash" checked class="mr-3"> เงินสดที่เคาน์เตอร์
+            <p class="font-bold text-gray-700">เลือกวิธีชำระ:</p>
+            <label class="flex items-center p-4 border-2 border-gray-100 rounded-xl cursor-pointer hover:bg-orange-50 transition-colors">
+                <input type="radio" name="method" value="Cash" checked class="mr-3 w-5 h-5 accent-orange-500"> 
+                <span class="font-bold text-gray-800">เงินสดที่เคาน์เตอร์</span>
             </label>
-            <label class="flex items-center p-4 border rounded-xl cursor-pointer hover:bg-orange-50">
-                <input type="radio" name="method" value="PromptPay" class="mr-3"> พร้อมเพย์ / โอนเงิน
+            <label class="flex items-center p-4 border-2 border-gray-100 rounded-xl cursor-pointer hover:bg-orange-50 transition-colors">
+                <input type="radio" name="method" value="PromptPay" class="mr-3 w-5 h-5 accent-orange-500"> 
+                <span class="font-bold text-gray-800">พร้อมเพย์ / โอนเงิน</span>
             </label>
         </div>
-        <button onclick="pay()" class="w-full bg-green-500 text-white py-4 rounded-xl mt-8 font-bold text-lg shadow-md">ยืนยันการแจ้งชำระ</button>
+        <button onclick="pay()" id="payBtn" class="w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl mt-8 font-bold text-xl shadow-lg transition-transform active:scale-95">
+            ยืนยันการแจ้งชำระ
+        </button>
     </div>
+
     <script>
-        const amount = new URLSearchParams(window.location.search).get('total');
+        const customerId = localStorage.getItem('customerId');
         const orderId = new URLSearchParams(window.location.search).get('id') || 0; 
+        let finalAmountToPay = 0; // 💡 ตัวแปรเก็บยอดเงินจริงที่จะใช้จ่าย
+
+        // 💡 1. ฟังก์ชันดึงยอดเงินล่าสุดจากฐานข้อมูลโดยตรง
+        async function fetchRealTotal() {
+            if (!customerId) return;
+            try {
+                const resStatus = await fetch(`/customer/status/${customerId}`);
+                const statusData = await resStatus.json();
+                
+                let sum = 0;
+                let customTotal = null;
+
+                statusData.forEach(item => {
+                    const itemPrice = Number(item.price || 0);
+                    const extraPrice = Number(item.extra_price || 0);
+                    const qty = Number(item.quantity || 1);
+                    sum += ((itemPrice + extraPrice) * qty);
+
+                    if (item.custom_total !== null && item.custom_total !== undefined) {
+                        customTotal = item.custom_total;
+                    }
+                });
+
+                // ถ้ายอดถูกแก้ (customTotal ไม่เท่ากับ null) ให้แสดงค่านั้น แทนที่ sum
+                finalAmountToPay = customTotal !== null ? customTotal : sum;
+                document.getElementById('finalAmount').innerText = finalAmountToPay + '฿';
+
+            } catch (error) {
+                console.error("Error loading real total:", error);
+            }
+        }
+
+        // ดึงยอดทันทีตอนเปิดหน้า และตั้งเวลาเช็คยอดใหม่ทุกๆ 3 วินาที (เผื่อแอดมินกำลังแก้ตัวเลข)
+        fetchRealTotal();
+        setInterval(fetchRealTotal, 3000);
         
-        document.getElementById('finalAmount').innerText = (amount || 0) + '฿';
-        
+        // 💡 2. ฟังก์ชันจ่ายเงิน
         async function pay() {
+            if (finalAmountToPay === 0) {
+                return Swal.fire('ยอดเงินไม่ถูกต้อง', 'ไม่มียอดที่ต้องชำระ หรือโหลดข้อมูลไม่สำเร็จ', 'error');
+            }
+
             const method = document.querySelector('input[name="method"]:checked').value;
-            const customerId = localStorage.getItem('customerId') || 1; 
+            const btn = document.getElementById('payBtn');
+            btn.disabled = true;
+            btn.innerText = "กำลังประมวลผล...";
 
             try {
-                // 1. ส่งข้อมูลไปให้หลังบ้านบันทึกลง Database
+                // ส่งข้อมูลไปให้หลังบ้านบันทึกลง Database (ใช้ finalAmountToPay ล่าสุด)
                 const res = await fetch('/customer/payment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         customer_id: customerId, 
                         order_id: orderId, 
-                        amount: amount, 
+                        amount: finalAmountToPay, // 💡 ใช้ยอดใหม่เสมอ ปลอดภัย 100%
                         method: method 
                     })
                 });
 
-                const data = await res.json(); // อ่านผลลัพธ์ที่หลังบ้านตอบกลับมา
+                const data = await res.json();
 
                 if (res.ok) {
-                    // 2. ถ้าบันทึกลงตาราง payment สำเร็จจริงๆ ค่อยให้ผ่าน
                     Swal.fire({
                         title: 'เรียบร้อย!',
-                        text: 'บันทึกยอดเงินเข้าสู่ระบบแล้ว',
+                        text: 'บันทึกแจ้งชำระเงินเข้าสู่ระบบแล้ว ขอบคุณครับ',
                         icon: 'success',
-                        confirmButtonColor: '#ea580c'
+                        confirmButtonColor: '#22c55e',
+                        customClass: { popup: 'rounded-[2rem]' }
                     }).then(() => {
                         window.location.href = `/customer/review?id=${orderId}`;
                     });
                 } else {
-                    // 3. ถ้า MySQL เตะออก ให้แสดงสาเหตุที่หน้าจอเลย
-                    Swal.fire('บันทึกไม่สำเร็จ', 'สาเหตุจาก DB: ' + (data.error || 'Unknown Error'), 'error');
+                    Swal.fire('บันทึกไม่สำเร็จ', 'สาเหตุจากระบบ: ' + (data.error || 'Unknown Error'), 'error');
                     console.error("Backend Error Detail:", data);
+                    btn.disabled = false;
+                    btn.innerText = "ยืนยันการแจ้งชำระ";
                 }
             } catch (error) {
                 Swal.fire('เชื่อมต่อล้มเหลว', error.message, 'error');
+                btn.disabled = false;
+                btn.innerText = "ยืนยันการแจ้งชำระ";
             }
         }
+
+        // 💡 3. ระบบเช็คสถานะโต๊ะอัตโนมัติ (เผื่อแอดมินปิดโต๊ะขณะกำลังจะจ่ายเงิน)
+        function checkSessionStatus() {
+            if (!customerId) return;
+            fetch(`/customer/check-session/${customerId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'closed' || data.status === 'not_found') {
+                        localStorage.removeItem('customerId');
+                        localStorage.removeItem('cart'); 
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'หมดเวลาใช้งาน',
+                            text: 'เซสชันของคุณถูกปิด ขอบคุณที่ใช้บริการครับ 🙏',
+                            confirmButtonColor: '#ea580c',
+                            allowOutsideClick: false, 
+                            allowEscapeKey: false
+                        }).then(() => window.location.href = '/');
+                    }
+                }).catch(err => console.error(err));
+        }
+        setInterval(checkSessionStatus, 5000);
     </script>
 </body>
 </html>
