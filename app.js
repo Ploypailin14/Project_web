@@ -694,7 +694,8 @@ app.post('/customer/table', (req, res) => {
 });
 
 app.get('/customer/menu', (req, res) => {
-    const sql = "SELECT * FROM menu_item WHERE status = 'available'";
+    // 💡 แก้ไข: ดึงข้อมูลเมนูทั้งหมด (ไม่ต้องกรอง available แล้ว ปล่อยให้หน้าเว็บจัดการสีเทาเอง)
+    const sql = "SELECT * FROM menu_item";
     con.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);

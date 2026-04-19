@@ -74,6 +74,7 @@
             }
         }
 
+        // 💡 ฟังก์ชันเรนเดอร์เมนูที่ปรับปรุงใหม่ (มีเช็คสถานะเมนูหมด)
         function renderMenu(categoryToFilter) {
             const list = document.getElementById('menuList');
             const filteredItems = (categoryToFilter === 'All') 
@@ -87,15 +88,34 @@
             
             list.innerHTML = filteredItems.map(item => {
                 const validImageUrl = (item.image && item.image.trim() !== '') ? item.image : 'https://placehold.co/400x400/ffedd5/ea580c?text=No+Image';
+                
+                // 💡 เช็คว่าเมนูนี้มีขายอยู่ไหม
+                const isAvailable = item.status === 'available';
+
+                // 💡 แต่งสีการ์ด: ถ้าขายอยู่ให้สีปกติ ถ้าหมดให้เป็นสีเทาและขาวดำ
+                const cardStyle = isAvailable 
+                    ? 'bg-white transform transition duration-300 hover:scale-[1.02]' 
+                    : 'bg-gray-100 opacity-70 grayscale';
+
+                // 💡 แต่งชื่อเมนู: ถ้าหมดให้เติม (หมด) สีแดง
+                const menuNameHtml = isAvailable 
+                    ? item.name 
+                    : `${item.name} <span class="text-sm text-red-500 ml-1 font-black">(หมด)</span>`;
+
+                // 💡 แต่งปุ่ม: ถ้าหมดให้กดไม่ได้
+                const buttonHtml = isAvailable 
+                    ? `<button onclick="openOrderModal(${item.menu_id}, '${item.name}', ${item.price}, '${item.category}')" class="bg-[#f39c12] hover:bg-orange-600 text-white px-6 py-2 rounded-xl font-bold shadow-md active:scale-90 transition-all">+ Add</button>`
+                    : `<button disabled class="bg-gray-400 text-white px-6 py-2 rounded-xl font-bold cursor-not-allowed">หมด</button>`;
+
                 return `
-                <div class="bg-white rounded-[2rem] p-4 flex shadow-md border border-gray-50 items-center transform transition duration-300 hover:scale-[1.02]">
+                <div class="rounded-[2rem] p-4 flex shadow-md border border-gray-50 items-center ${cardStyle}">
                     <img src="${validImageUrl}" class="w-28 h-28 rounded-[1.5rem] object-cover border-4 border-orange-50 shadow-inner shrink-0">
                     <div class="ml-5 flex-1">
-                        <h3 class="text-xl font-bold text-gray-800 leading-tight">${item.name}</h3>
-                        <p class="text-gray-400 text-xs font-semibold mt-1 bg-gray-100 inline-block px-2 py-0.5 rounded-md">${item.category}</p>
+                        <h3 class="text-xl font-bold text-gray-800 leading-tight">${menuNameHtml}</h3>
+                        <p class="text-gray-400 text-xs font-semibold mt-1 bg-gray-200 inline-block px-2 py-0.5 rounded-md">${item.category}</p>
                         <div class="flex justify-between items-center mt-3">
                             <span class="text-2xl font-black text-[#d48806]">${item.price}฿</span>
-                            <button onclick="openOrderModal(${item.menu_id}, '${item.name}', ${item.price}, '${item.category}')" class="bg-[#f39c12] hover:bg-orange-600 text-white px-6 py-2 rounded-xl font-bold shadow-md active:scale-90 transition-all">+ Add</button>
+                            ${buttonHtml}
                         </div>
                     </div>
                 </div>`;
@@ -177,7 +197,7 @@
         
         loadMenu();
 
-       // 💡 ระบบเช็คสถานะโต๊ะอัตโนมัติ (เช็คโดนเตะ + เช็คย้ายโต๊ะ)
+       // ระบบเช็คสถานะโต๊ะอัตโนมัติ
         function checkSessionStatus() {
             const custId = localStorage.getItem('customerId');
             if (!custId) return;
@@ -185,7 +205,6 @@
             fetch(`/customer/check-session/${custId}`)
                 .then(res => res.json())
                 .then(data => {
-                    // 1. ถ้าแอดมินปิดโต๊ะ
                     if (data.status === 'closed' || data.status === 'not_found') {
                         localStorage.removeItem('customerId');
                         localStorage.removeItem('cart'); 
@@ -199,12 +218,9 @@
                             allowEscapeKey: false
                         }).then(() => window.location.href = '/');
                     } 
-                    // 2. ถ้าเซสชันยังอยู่ ให้อัปเดตเบอร์โต๊ะแบบ Real-time เผื่อแอดมินย้ายโต๊ะให้
                     else if (data.status === 'active' || data.status === 'pending_payment') {
                         if (data.table_number) {
-                            localStorage.setItem('tableNumber', data.table_number); // อัปเดตในความจำ
-                            
-                            // ถ้าอยู่ในหน้า menu.html ให้เปลี่ยนตัวเลขโชว์มุมขวาบนทันที
+                            localStorage.setItem('tableNumber', data.table_number);
                             const displayTable = document.getElementById('displayTable');
                             if (displayTable && displayTable.innerText !== data.table_number.toString()) {
                                 displayTable.innerText = data.table_number;
@@ -215,7 +231,6 @@
                 .catch(err => console.error("Session check error:", err));
         }
 
-        // สั่งให้คอยเช็คสถานะทุกๆ 3 วินาที
         setInterval(checkSessionStatus, 3000);
         checkSessionStatus();
     </script>
