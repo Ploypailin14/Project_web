@@ -291,7 +291,7 @@ app.put('/admin/order/:id/custom-total', (req, res) => {
     });
 });
 
-// 9. Get Dashboard statistics (เวอร์ชันซ่อม 500 Error และชื่อคอลัมน์)
+// 9. Get Dashboard statistics (เวอร์ชันซ่อมชื่อคอลัมน์และรองรับการลบลูกค้า)
 app.get('/admin/dashboard', (req, res) => {
     const { startDate, endDate, filter } = req.query;
     let whereClausePayment = "";
@@ -301,7 +301,7 @@ app.get('/admin/dashboard', (req, res) => {
 
     if (filter !== 'all' && startDate && endDate) {
         if (startDate === endDate) {
-            // 💡 แก้ไข: ใช้ชื่อคอลัมน์ให้ตรงกับ DB (payment_date)
+            // 💡 แก้ไข: ใช้ชื่อคอลัมน์ payment_date ให้ตรงตามรูป phpMyAdmin ของคุณ
             whereClausePayment = "WHERE payment_date LIKE ?";
             whereClauseReview = "WHERE review_time LIKE ?";
             whereClauseCustomer = "WHERE login_time LIKE ?";
@@ -323,12 +323,8 @@ app.get('/admin/dashboard', (req, res) => {
     `;
     
     con.query(sql, queryParams, (err, results) => {
-        if (err) {
-            console.error("Dashboard SQL Error:", err); // พ่น error ลง terminal ให้ดูด้วย
-            return res.status(500).json({ error: err.message });
-        }
+        if (err) return res.status(500).json({ error: err.message });
         
-        // 💡 ป้องกันค่า NULL (ถ้าไม่มีออเดอร์วันนี้ SUM จะเป็น NULL)
         const row = results[0] || {};
         const customers = row.customer_count || 0;
         const revenue = row.total_revenue || 0;
@@ -342,7 +338,7 @@ app.get('/admin/dashboard', (req, res) => {
     });
 });
 
-// 10. Get Top Menus (แก้ปัญหา Timezone ให้ตรงกับ Dashboard)
+// 10. Get Top Menus (เวอร์ชันไม่ง้อ customer_session เพื่อให้ยอดไม่หายหลังลบลูกค้า)
 app.get('/admin/top-menus', (req, res) => {
     const { startDate, endDate, filter } = req.query;
     let whereClause = "";
@@ -358,6 +354,8 @@ app.get('/admin/top-menus', (req, res) => {
         }
     }
 
+    // 💡 แก้ไข: ใช้ LEFT JOIN กับ order_table ตรงๆ โดยไม่ผ่าน customer_session 
+    // เพื่อให้ยอดขายยังอยู่แม้ลูกค้าจะถูกลบเซสชันไปแล้ว
     const sql = `
         SELECT 
             m.name, 
@@ -461,33 +459,49 @@ app.put('/admin/customer-session/:id', (req, res) => {
     });
 });
 
-// 11.2 Get all Order History
-app.get('/admin/orders', (req, res) => {
+// 💡 แก้ไข: API ดึงประวัติการสั่งอาหาร (เปลี่ยนกลับมาโชว์เฉพาะคนที่มี "บิลออเดอร์" จริงๆ เท่านั้น)
+app.get('/admin/order-history', (req, res) => {
     const { startDate, endDate } = req.query;
     let whereClause = "";
-    let queryParams = [];
+    let params = [];
 
     if (startDate && endDate) {
-        whereClause = "WHERE ot.order_time BETWEEN ? AND ?";
-        const startDateTime = `${startDate} 00:00:00`;
-        const endDateTime = `${endDate} 23:59:59`;
-        queryParams = [startDateTime, endDateTime];
+        whereClause = "AND DATE(ot.order_time) BETWEEN ? AND ?";
+        params = [startDate, endDate];
     }
 
+    // 💡 ใช้ order_table เป็นหลัก: ใครไม่มีข้อมูลในตารางนี้ จะไม่ถูกดึงมาโชว์
     const sql = `
-        SELECT ot.order_id, ot.customer_id, ot.status, ot.order_time,
+        SELECT 
+            ot.order_id, 
+            ot.customer_id, 
+            ot.status, 
+            ot.order_time,
             GROUP_CONCAT(CONCAT(mi.name, ' (x', oi.quantity, ')') SEPARATOR ', ') as items
         FROM order_table ot
-        JOIN order_item oi ON ot.order_id = oi.order_id
-        JOIN menu_item mi ON oi.menu_id = mi.menu_id
-        ${whereClause}
+        INNER JOIN customer_session cs ON ot.customer_id = cs.customer_id 
+        LEFT JOIN order_item oi ON ot.order_id = oi.order_id
+        LEFT JOIN menu_item mi ON oi.menu_id = mi.menu_id
+        WHERE 1=1 ${whereClause}
         GROUP BY ot.order_id
         ORDER BY ot.order_time DESC
     `;
     
-    con.query(sql, queryParams, (err, results) => {
+    con.query(sql, params, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json(results);
+    });
+});
+
+// 💡 [เพิ่มใหม่] API สำหรับลบประวัติออเดอร์ (เผื่อแอดมินอยากเคลียร์ขยะ)
+app.delete('/admin/order/:id', (req, res) => {
+    const orderId = req.params.id;
+    con.query("DELETE FROM order_item WHERE order_id = ?", [orderId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        con.query("DELETE FROM order_table WHERE order_id = ?", [orderId], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.status(200).json({ message: "ลบประวัติเรียบร้อย" });
+        });
     });
 });
 
@@ -499,6 +513,22 @@ app.put('/admin/order/:id/status', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         if (result.affectedRows === 0) return res.status(404).json({ message: `Order ID ${req.params.id} not found.` });
         res.status(200).json({ message: "Order status updated successfully!" });
+    });
+});
+
+// 11.4 Delete Order History Record (💡 เพิ่มใหม่: สำหรับลบประวัติออเดอร์)
+app.delete('/admin/order/:id', (req, res) => {
+    const orderId = req.params.id;
+    
+    // ลบใน order_item ก่อนเพื่อไม่ให้ติด Foreign Key
+    con.query("DELETE FROM order_item WHERE order_id = ?", [orderId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        // จากนั้นค่อยลบใน order_table
+        con.query("DELETE FROM order_table WHERE order_id = ?", [orderId], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.status(200).json({ message: "ลบประวัติออเดอร์ออกจากระบบเรียบร้อยแล้ว" });
+        });
     });
 });
 

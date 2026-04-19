@@ -5,9 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. โหลดรายการเซสชันทั้งหมด
     async function loadSessions() {
         try {
-            const res = await fetch('/admin/customer-sessions'); 
+            const res = await fetch('/admin/customer-sessions');
             const data = await res.json();
-            
+
             if (data.length === 0) {
                 sessionBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 font-bold">ยังไม่มีลูกค้าเข้าใช้บริการในขณะนี้</td></tr>`;
                 return;
@@ -34,8 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </td>
                     <td class="text-sm text-gray-600 font-bold">
-                        ${new Date(s.login_time).toLocaleString('th-TH')}
-                    </td>
+    ${new Date(s.login_time).toLocaleString('en-GB').replace(',', '')}
+</td>
                     <td>
                         <span class="badge ${statusBadgeClass} border-none font-bold py-3 px-3">
                             ${(s.status || 'N/A').toUpperCase()}
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                 </tr>`;
             }).join(''); // 💡 เอา join ไว้หลังวงเล็บ map
-            
+
         } catch (err) {
             console.error("Error loading sessions:", err);
             sessionBody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 font-bold py-8">ไม่สามารถโหลดข้อมูลได้ (เซิร์ฟเวอร์มีปัญหา)</td></tr>`;
@@ -81,9 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await fetch(`/admin/customer-session/${custId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         table_id: tableNumber, // ส่งเบอร์โต๊ะที่พิมพ์ไป
-                        status: status 
+                        status: status
                     })
                 });
 
@@ -91,17 +91,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (res.ok) {
                     document.getElementById('edit_session_modal').close();
-                    loadSessions(); 
-                    
+                    loadSessions();
+
                     // 💡 แจ้งเตือนสำเร็จ (ปุ่มสีเขียวชัดเจน)
                     Swal.fire({
                         title: 'สำเร็จ!',
                         text: 'อัปเดตข้อมูลลูกค้าและสถานะโต๊ะเรียบร้อย',
                         icon: 'success',
                         confirmButtonText: 'ตกลง',
-                        customClass: { 
+                        customClass: {
                             confirmButton: 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg border-none',
-                            popup: 'rounded-[2rem]' 
+                            popup: 'rounded-[2rem]'
                         },
                         buttonsStyling: false
                     });
@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         text: data.error || 'ไม่สามารถอัปเดตข้อมูลได้',
                         icon: 'error',
                         confirmButtonText: 'รับทราบ',
-                        customClass: { 
+                        customClass: {
                             confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg border-none',
                             popup: 'rounded-[2rem]'
                         },
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
                     icon: 'error',
                     confirmButtonText: 'ตกลง',
-                    customClass: { 
+                    customClass: {
                         confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg border-none',
                         popup: 'rounded-[2rem]'
                     },

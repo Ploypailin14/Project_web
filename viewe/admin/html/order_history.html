@@ -1,17 +1,21 @@
 <!DOCTYPE html>
 <html lang="th" data-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order History</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
+
 <body class="bg-gradient-to-b from-[#db8b22] to-[#382c21] min-h-screen p-4 md:p-8 text-black font-sans">
     <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-2xl p-6">
-        
+
         <div class="flex items-center gap-4 mb-6 border-b pb-4">
-            <button onclick="window.location.href='/admin/page/welcome'" class="btn btn-sm bg-gray-200 hover:bg-gray-300 border-none text-gray-700 font-bold flex-shrink-0">
+            <button onclick="window.location.href='/admin/page/welcome'"
+                class="btn btn-sm bg-gray-200 hover:bg-gray-300 border-none text-gray-700 font-bold flex-shrink-0">
                 ◀ กลับหน้าหลัก
             </button>
             <div>
@@ -20,38 +24,48 @@
             </div>
         </div>
 
-        <div class="bg-gray-50 p-4 rounded-xl mb-6 flex flex-wrap items-center justify-between gap-4 border border-gray-200">
+        <div
+            class="bg-gray-50 p-4 rounded-xl mb-6 flex flex-wrap items-center justify-between gap-4 border border-gray-200">
             <div class="flex flex-wrap items-center gap-4">
                 <div class="flex items-center gap-2">
                     <label for="start-date" class="font-bold text-gray-700 text-sm">ตั้งแต่:</label>
-                    <input type="date" id="start-date" class="input input-bordered input-sm bg-white text-black font-bold">
+                    <input type="date" id="start-date"
+                        class="input input-bordered input-sm bg-white text-black font-bold">
                 </div>
                 <div class="flex items-center gap-2">
                     <label for="end-date" class="font-bold text-gray-700 text-sm">ถึง:</label>
-                    <input type="date" id="end-date" class="input input-bordered input-sm bg-white text-black font-bold">
+                    <input type="date" id="end-date"
+                        class="input input-bordered input-sm bg-white text-black font-bold">
                 </div>
             </div>
             <div class="flex gap-2">
-                <button onclick="applyDateFilter()" class="btn btn-sm bg-orange-500 hover:bg-orange-600 text-white font-bold border-none shadow-sm px-6">🔍 ค้นหา</button>
-                <button onclick="clearDateFilter()" class="btn btn-sm bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold border-none shadow-sm px-6">❌ ล้างค่า</button>
+                <button onclick="applyDateFilter()"
+                    class="btn btn-sm bg-orange-500 hover:bg-orange-600 text-white font-bold border-none shadow-sm px-6">🔍
+                    ค้นหา</button>
+                <button onclick="clearDateFilter()"
+                    class="btn btn-sm bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold border-none shadow-sm px-6">❌
+                    ล้างค่า</button>
             </div>
         </div>
 
         <div class="overflow-x-auto">
             <table class="table w-full">
-                <thead class="text-gray-600 bg-gray-100 font-bold text-sm">
+                <thead>
                     <tr>
                         <th>รหัสบิล</th>
                         <th>รหัสลูกค้า</th>
                         <th>วัน-เวลา</th>
                         <th>รายการอาหาร</th>
                         <th>สถานะ</th>
+                        <th>จัดการ</th>
                     </tr>
                 </thead>
-                <tbody id="history-body"></tbody>
+                <tbody id="history-table-body">
+                </tbody>
             </table>
         </div>
     </div>
     <script src="/public/js/order_history.js"></script>
 </body>
+
 </html>
