@@ -62,29 +62,25 @@
                 let sum = 0; 
                 let allServed = true; 
                 let hasItem = false;
-                let customTotal = null; // 💡 สร้างตัวแปรมารับยอดที่แอดมินแก้ไข
+                let customTotal = null; 
 
                 statusData.forEach(item => {
                     hasItem = true;
                     
-                    // คำนวณยอดเงินรวม (ราคาอาหาร + ค่าสั่งพิเศษ)
                     const itemPrice = Number(item.price || 0);
                     const extraPrice = Number(item.extra_price || 0);
                     const qty = Number(item.quantity || 1);
                     
                     sum += ((itemPrice + extraPrice) * qty);
 
-                    // 💡 ถ้ายอดที่แอดมินแก้ไขมามีค่า ให้เก็บไว้ใน customTotal
                     if (item.custom_total !== null && item.custom_total !== undefined) {
                         customTotal = item.custom_total;
                     }
 
-                    // เช็คสถานะการเสิร์ฟอาหาร
                     if (item.order_status === 'pending' || item.order_status === 'cooking') {
                         allServed = false;
                     }
 
-                    // จัดการสีและข้อความตามสถานะ
                     let borderColor = 'border-yellow-400';
                     let textColor = 'text-yellow-500';
                     let statusText = 'Pending';
@@ -99,13 +95,11 @@
                         statusText = 'Served';
                     }
 
-                    // เพิ่มข้อความแสดงรายการพิเศษ (ถ้ามี)
                     let noteDisplay = item.detail || '-';
                     if (item.extra && item.extra.trim() !== '') {
                         noteDisplay += ` <span class="text-orange-500 font-bold ml-1">| ${item.extra} (+${extraPrice}฿)</span>`;
                     }
 
-                    // สร้าง HTML ของรายการอาหารแต่ละรายการ
                     container.innerHTML += `
                         <div class="bg-white rounded-2xl p-5 flex justify-between items-center shadow-sm border-l-[6px] ${borderColor}">
                             <div>
@@ -120,15 +114,11 @@
                     `;
                 });
 
-                // 💡 ถ้ายอดถูกแก้ (customTotal ไม่เท่ากับ null) ให้แสดงค่านั้น แทนที่ sum
                 currentTotal = customTotal !== null ? customTotal : sum;
-                
-                // แสดงยอดรวมที่อัปเดตแล้ว
                 document.getElementById('total-amount-display').innerText = currentTotal + '฿';
                 
                 canPay = (hasItem && allServed);
 
-                // ดึงรหัสออเดอร์สำหรับชำระเงิน
                 const resHistory = await fetch(`/customer/history/${customerId}`);
                 const historyData = await resHistory.json();
                 if (historyData.length > 0) {
@@ -159,9 +149,36 @@
                 return;
             }
 
-            // นำยอดรวมปัจจุบัน (currentTotal) ไปใช้ในหน้าชำระเงิน
             window.location.href = `/customer/payment?total=${currentTotal}&id=${currentOrderId}`;
         }
+
+        // 💡 ระบบเช็คสถานะโต๊ะอัตโนมัติ
+        function checkSessionStatus() {
+            const custId = localStorage.getItem('customerId');
+            if (!custId) return;
+
+            fetch(`/customer/check-session/${custId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'closed' || data.status === 'not_found') {
+                        localStorage.removeItem('customerId');
+                        localStorage.removeItem('cart'); 
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'หมดเวลาใช้งาน',
+                            text: 'เซสชันของคุณถูกปิด หรือคุณได้ชำระเงินเรียบร้อยแล้ว ขอบคุณที่ใช้บริการครับ 🙏',
+                            confirmButtonColor: '#ea580c',
+                            confirmButtonText: 'กลับหน้าแรก',
+                            allowOutsideClick: false, 
+                            allowEscapeKey: false
+                        }).then(() => window.location.href = '/');
+                    }
+                })
+                .catch(err => console.error("Session check error:", err));
+        }
+
+        setInterval(checkSessionStatus, 3000);
+        checkSessionStatus();
     </script>
 </body>
 </html>

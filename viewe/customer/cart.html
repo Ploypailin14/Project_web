@@ -41,15 +41,12 @@
             }
 
             document.getElementById('cartItems').innerHTML = cart.map((item, index) => {
-                // 💡 คำนวณราคาต่อชิ้น = ราคาหลัก + ราคาพิเศษ (ถ้ามี)
                 const itemPrice = Number(item.price || 0);
                 const extraPrice = Number(item.extra_price || 0);
                 const combinedPrice = itemPrice + extraPrice;
                 
-                // 💡 บวกเข้ายอดรวมทั้งหมด
                 total += combinedPrice * item.quantity;
 
-                // 💡 สร้างข้อความแสดงการสั่งพิเศษ
                 let extraTag = '';
                 if (item.extra && item.extra.trim() !== '') {
                     extraTag = `<span class="text-orange-500 font-bold ml-1">(+${extraPrice}฿)</span>`;
@@ -117,6 +114,34 @@
         }
         
         renderCart();
+
+        // 💡 ระบบเช็คสถานะโต๊ะอัตโนมัติ
+        function checkSessionStatus() {
+            const custId = localStorage.getItem('customerId');
+            if (!custId) return;
+
+            fetch(`/customer/check-session/${custId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'closed' || data.status === 'not_found') {
+                        localStorage.removeItem('customerId');
+                        localStorage.removeItem('cart'); 
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'หมดเวลาใช้งาน',
+                            text: 'เซสชันของคุณถูกปิด หรือคุณได้ชำระเงินเรียบร้อยแล้ว ขอบคุณที่ใช้บริการครับ 🙏',
+                            confirmButtonColor: '#ea580c',
+                            confirmButtonText: 'กลับหน้าแรก',
+                            allowOutsideClick: false, 
+                            allowEscapeKey: false
+                        }).then(() => window.location.href = '/');
+                    }
+                })
+                .catch(err => console.error("Session check error:", err));
+        }
+
+        setInterval(checkSessionStatus, 3000);
+        checkSessionStatus();
     </script>
 </body>
 </html>
