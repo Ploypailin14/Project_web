@@ -1,121 +1,114 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const reviewsContainer = document.getElementById('reviews-container');
+    loadReviews();
+});
 
-    // 1. ฟังก์ชันสร้างดาว
-    function getStars(rating) {
-        const fullStar = '<span class="text-yellow-400 text-xl">★</span>';
-        const emptyStar = '<span class="text-gray-300 text-xl">★</span>';
-        return fullStar.repeat(rating) + emptyStar.repeat(Math.max(0, 5 - rating));
-    }
+async function loadReviews() {
+    const container = document.getElementById('reviews-container');
+    try {
+        const res = await fetch('/admin/reviews');
+        const data = await res.json();
 
-    // 2. ฟังก์ชันเรนเดอร์รีวิว
-    function renderReviews(reviews) {
-        if (!reviewsContainer) return;
-        reviewsContainer.innerHTML = ''; 
-        
-        if (reviews.length === 0) {
-            reviewsContainer.innerHTML = '<div class="text-center text-gray-500 mt-10 font-bold">ยังไม่มีรีวิวจากลูกค้าในขณะนี้</div>';
+        if (data.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 font-bold mt-10">ยังไม่มีรีวิวจากลูกค้า</p>`;
             return;
         }
 
-        reviews.forEach(review => {
-            const reviewCard = document.createElement('div');
-            // ถ้าถูกซ่อน (is_hidden = 1) ให้ทำสีจางลง
-            const isHidden = review.is_hidden === 1;
-            reviewCard.className = `border border-gray-200 rounded-xl p-5 shadow-sm transition-all ${isHidden ? 'bg-gray-200 opacity-60' : 'bg-gray-50'}`;
+        container.innerHTML = data.map(review => {
+            const dateStr = new Date(review.review_time).toLocaleString('th-TH');
             
-            const dateTxt = review.review_time ? new Date(review.review_time).toLocaleString('th-TH') : "ไม่ระบุวันที่";
+            // จัดการแสดงผลดาว (สีเหลือง/สีเทา)
+            let stars = '';
+            for(let i = 1; i <= 5; i++) {
+                stars += `<span class="${i <= review.rating ? 'text-yellow-400' : 'text-gray-200'} text-lg">★</span>`;
+            }
 
-            reviewCard.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
+            // 💡 พระเอกอยู่ตรงนี้: เช็คว่ารีวิวถูกซ่อนไหม ถ้าซ่อนให้ใส่คลาสเบลอ
+            const isHidden = review.is_hidden === 1 || review.is_hidden === true;
+            
+            // ถ้าถูกซ่อน จะใส่เอฟเฟกต์เบลอ (blur-sm), ลดความทึบ (opacity-50) และกันลากคลุมข้อความ (select-none)
+            const commentStyle = isHidden ? 'blur-sm opacity-40 select-none bg-gray-100' : 'bg-white';
+            
+            // ข้อความแจ้งเตือนเล็กๆ ว่าโดนซ่อนอยู่
+            const hiddenAlert = isHidden ? `<span class="text-xs text-red-500 font-bold ml-2">(รีวิวนี้ถูกซ่อน)</span>` : '';
+
+            // จัดการปุ่ม Show/Hide
+            const toggleBtn = isHidden
+                ? `<button onclick="toggleHide(${review.review_id}, 0)" class="btn btn-sm bg-green-400 hover:bg-green-500 text-white border-none px-6">Show</button>`
+                : `<button onclick="toggleHide(${review.review_id}, 1)" class="btn btn-sm bg-yellow-400 hover:bg-yellow-500 text-white border-none px-6">Hide</button>`;
+
+            return `
+            <div class="bg-gray-50 rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col gap-3">
+                <div class="flex justify-between items-start">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-orange-500 text-white rounded-full flex items-center justify-center font-black text-xl shadow-inner">
-                            ${(review.username || 'C').charAt(0).toUpperCase()} 
-                        </div>
+                        <div class="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-xl shadow-inner">C</div>
                         <div>
-                            <h3 class="text-lg font-black text-gray-800 m-0">${review.username || 'Anonymous Customer'}</h3>
-                            <div class="flex items-center gap-2">
-                                ${getStars(review.rating)}
-                            </div>
+                            <h3 class="font-bold text-gray-800">Anonymous Customer ${hiddenAlert}</h3>
+                            <div class="flex gap-1">${stars}</div>
                         </div>
                     </div>
-                    <span class="text-xs text-gray-400 font-bold">${dateTxt}</span>
+                    <span class="text-xs text-gray-400 font-bold">${dateStr}</span>
                 </div>
-                <p class="text-gray-700 font-medium mt-3 ml-14 bg-white p-3 rounded-lg border border-gray-100 italic">
-                    "${review.comment || 'ไม่มีข้อความความประทับใจ'}"
-                </p>
-                <div class="mt-4 flex gap-2 justify-end">
-                    <button onclick="toggleHide(${review.review_id}, ${review.is_hidden})" class="btn btn-xs ${isHidden ? 'btn-success' : 'btn-warning'} text-white border-none px-4">
-                        ${isHidden ? 'Show' : 'Hide'}
-                    </button>
-                    <button onclick="deleteReview(${review.review_id})" class="btn btn-xs bg-red-500 hover:bg-red-600 text-white border-none px-4">
-                        Delete
-                    </button>
+                
+                <div class="p-4 rounded-xl border border-gray-100 transition-all duration-300 ${commentStyle}">
+                    <p class="text-gray-600 italic font-medium">"${review.comment || 'ไม่มีข้อความความประทับใจ'}"</p>
                 </div>
+
+                <div class="flex justify-end gap-2 mt-2">
+                    ${toggleBtn}
+                    <button onclick="deleteReview(${review.review_id})" class="btn btn-sm bg-red-500 hover:bg-red-600 text-white border-none px-6">Delete</button>
+                </div>
+            </div>
             `;
-            reviewsContainer.appendChild(reviewCard);
-        });
+        }).join('');
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = `<p class="text-center text-red-500 font-bold mt-10">โหลดข้อมูลไม่สำเร็จ (เซิร์ฟเวอร์มีปัญหา)</p>`;
     }
+}
 
-    // 3. ดึงข้อมูลจาก API หลังบ้าน (Node.js)
-    async function fetchReviews() {
-        try {
-            const res = await fetch('/admin/reviews');
-            const data = await res.json();
-            renderReviews(data);
-        } catch (error) {
-            console.error('Error fetching reviews:', error);
-            reviewsContainer.innerHTML = '<p class="text-center text-red-500 mt-10 font-bold">ไม่สามารถเชื่อมต่อฐานข้อมูลได้</p>';
+window.toggleHide = async function(id, is_hidden) {
+    try {
+        const res = await fetch(`/admin/review/${id}/hide`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_hidden })
+        });
+        if (res.ok) {
+            loadReviews(); // โหลดหน้าใหม่เพื่อให้เอฟเฟกต์เบลอทำงาน
         }
+    } catch (err) {
+        Swal.fire('ผิดพลาด', 'ไม่สามารถเปลี่ยนสถานะได้', 'error');
     }
+}
 
-    // 4. ฟังก์ชันซ่อน/แสดงรีวิว
-    window.toggleHide = async (id, currentStatus) => {
-        try {
-            const newStatus = currentStatus === 1 ? 0 : 1;
-            const res = await fetch(`/admin/review/${id}/hide`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_hidden: newStatus })
-            });
-            if (res.ok) fetchReviews();
-        } catch (err) { alert('Failed to update review status'); }
-    };
-
-    // 5. ฟังก์ชันลบรีวิวถาวร (แก้ไขปุ่มล่องหนและเปลี่ยนภาษา)
-    window.deleteReview = (id) => {
-        Swal.fire({
-            title: 'ลบรีวิวนี้?',
-            text: "ข้อมูลรีวิวจะถูกลบออกจากระบบถาวร",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'ใช่, ลบเลย',
-            cancelButtonText: 'ยกเลิก', // เปลี่ยนเป็น "ยกเลิก" เรียบร้อย
-            // 💡 บังคับสีปุ่มเพื่อแก้ปัญหาปุ่มล่องหน
-            customClass: {
-                confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg mx-2',
-                cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg mx-2'
-            },
-            buttonsStyling: false // ปิดสไตล์เดิมเพื่อใช้ Tailwind
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    const res = await fetch(`/admin/review/${id}`, { method: 'DELETE' });
-                    if (res.ok) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'ลบสำเร็จ',
-                            showConfirmButton: false,
-                            timer: 1000
-                        });
-                        fetchReviews();
-                    }
-                } catch (err) {
-                    console.error('Delete error:', err);
+window.deleteReview = function(id) {
+    Swal.fire({
+        title: 'ยืนยันการลบ?',
+        text: "หากลบแล้วจะไม่สามารถกู้คืนรีวิวนี้ได้!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#9ca3af',
+        confirmButtonText: 'ใช่, ลบทิ้งเลย!',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]' }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const res = await fetch(`/admin/review/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    Swal.fire({
+                        title: 'ลบสำเร็จ!',
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 1500,
+                        customClass: { popup: 'rounded-[2rem]' }
+                    });
+                    loadReviews();
                 }
+            } catch (err) {
+                Swal.fire('ผิดพลาด', 'ไม่สามารถลบรีวิวได้', 'error');
             }
-        });
-    };
-
-    fetchReviews();
-});
+        }
+    });
+}
