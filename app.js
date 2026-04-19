@@ -758,14 +758,24 @@ app.get('/customer/history/:customerId', (req, res) => {
             return order;
         });
 
-        // 💡 API ตรวจสอบสถานะเซสชันลูกค้า (เพื่อเตะลูกค้าออกกรณีแอดมินปิดโต๊ะ)
+       // 💡 API ตรวจสอบสถานะเซสชันลูกค้า (เช็คการปิดโต๊ะ + ดึงเบอร์โต๊ะล่าสุดแบบ Real-time)
 app.get('/customer/check-session/:id', (req, res) => {
-    const sql = "SELECT status FROM customer_session WHERE customer_id = ?";
+    const sql = `
+        SELECT cs.status, rt.table_number 
+        FROM customer_session cs 
+        LEFT JOIN restaurant_table rt ON cs.table_id = rt.table_id 
+        WHERE cs.customer_id = ?
+    `;
     con.query(sql, [req.params.id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
+        
         // ถ้าไม่พบลูกค้าในระบบ หรือสถานะเป็น closed ให้ส่งบอกหน้าเว็บ
         if (results.length === 0) return res.json({ status: 'not_found' });
-        res.json({ status: results[0].status });
+        
+        res.json({ 
+            status: results[0].status,
+            table_number: results[0].table_number // 💡 ส่งเบอร์โต๊ะล่าสุดกลับไปด้วย
+        });
     });
 });
 

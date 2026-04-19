@@ -115,7 +115,7 @@
         
         renderCart();
 
-        // 💡 ระบบเช็คสถานะโต๊ะอัตโนมัติ
+       // 💡 ระบบเช็คสถานะโต๊ะอัตโนมัติ (เช็คโดนเตะ + เช็คย้ายโต๊ะ)
         function checkSessionStatus() {
             const custId = localStorage.getItem('customerId');
             if (!custId) return;
@@ -123,6 +123,7 @@
             fetch(`/customer/check-session/${custId}`)
                 .then(res => res.json())
                 .then(data => {
+                    // 1. ถ้าแอดมินปิดโต๊ะ
                     if (data.status === 'closed' || data.status === 'not_found') {
                         localStorage.removeItem('customerId');
                         localStorage.removeItem('cart'); 
@@ -135,11 +136,24 @@
                             allowOutsideClick: false, 
                             allowEscapeKey: false
                         }).then(() => window.location.href = '/');
+                    } 
+                    // 2. ถ้าเซสชันยังอยู่ ให้อัปเดตเบอร์โต๊ะแบบ Real-time เผื่อแอดมินย้ายโต๊ะให้
+                    else if (data.status === 'active' || data.status === 'pending_payment') {
+                        if (data.table_number) {
+                            localStorage.setItem('tableNumber', data.table_number); // อัปเดตในความจำ
+                            
+                            // ถ้าอยู่ในหน้า menu.html ให้เปลี่ยนตัวเลขโชว์มุมขวาบนทันที
+                            const displayTable = document.getElementById('displayTable');
+                            if (displayTable && displayTable.innerText !== data.table_number.toString()) {
+                                displayTable.innerText = data.table_number;
+                            }
+                        }
                     }
                 })
                 .catch(err => console.error("Session check error:", err));
         }
 
+        // สั่งให้คอยเช็คสถานะทุกๆ 3 วินาที
         setInterval(checkSessionStatus, 3000);
         checkSessionStatus();
     </script>
