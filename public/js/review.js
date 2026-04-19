@@ -14,7 +14,8 @@ async function loadReviews() {
         }
 
         container.innerHTML = data.map(review => {
-            const dateStr = new Date(review.review_time).toLocaleString('th-TH');
+            // 💡 แก้ไข: เปลี่ยนมาใช้ en-GB เพื่อให้แสดงผลเป็นปี ค.ศ. 
+            const dateStr = new Date(review.review_time).toLocaleString('en-GB').replace(',', '');
             
             // จัดการแสดงผลดาว (สีเหลือง/สีเทา)
             let stars = '';
