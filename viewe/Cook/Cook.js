@@ -1,5 +1,24 @@
 const API_BASE_URL = 'http://localhost:3000'; 
 
+// ==========================================
+// 🌟 0. ระบบ Cook Session (จำการล็อกอิน)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    // เช็คว่ามี Token (เคยล็อกอินไว้) หรือไม่
+    const token = localStorage.getItem('cookToken');
+    
+    if (token) {
+        // ถ้ามี: ให้ข้ามหน้า Login แล้วเปิดแถบเมนู + ไปหน้า Orders เลย
+        document.getElementById('login-page').classList.add('hidden');
+        document.getElementById('main-nav').style.display = 'flex';
+        showPage('orders');
+    } else {
+        // ถ้าไม่มี: ให้แสดงหน้า Login ตามปกติ
+        document.getElementById('login-page').classList.remove('hidden');
+        document.getElementById('main-nav').style.display = 'none';
+    }
+});
+
 function showPage(pageId) {
     // ซ่อนทุกหน้า
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -49,9 +68,15 @@ function logout() {
         text: 'คุณต้องการออกจากระบบใช่หรือไม่?',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#ea580c',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: 'ใช่, ออกจากระบบ'
+        confirmButtonText: 'ใช่, ออกจากระบบ',
+        cancelButtonText: 'ยกเลิก',
+        // 💡 แก้ไขปุ่มล่องหน
+        customClass: {
+            confirmButton: 'btn bg-orange-500 hover:bg-orange-600 text-white border-none px-6 mx-2',
+            cancelButton: 'btn bg-gray-500 hover:bg-gray-600 text-white border-none px-6 mx-2',
+            popup: 'rounded-3xl'
+        },
+        buttonsStyling: false
     }).then((result) => {
         if (result.isConfirmed) {
             document.getElementById('main-nav').style.display = 'none';
@@ -76,7 +101,15 @@ async function handleAuth() {
     const password = document.getElementById('password-input').value;
     const btn = document.getElementById('submit-btn');
 
-    if (!cookId || !password) return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+    if (!cookId || !password) {
+        return Swal.fire({
+            title: 'แจ้งเตือน',
+            text: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+            icon: 'warning',
+            customClass: { confirmButton: 'btn bg-orange-500 text-white px-8 border-none', popup: 'rounded-3xl' },
+            buttonsStyling: false
+        });
+    }
 
     const parsedCookId = parseInt(cookId);
 
@@ -97,17 +130,37 @@ async function handleAuth() {
                 showPage('orders');
                 document.getElementById('login-page').style.opacity = "1";
             } else {
-                Swal.fire('เข้าสู่ระบบล้มเหลว', result.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
+                Swal.fire({
+                    title: 'เข้าสู่ระบบล้มเหลว',
+                    text: result.message || 'รหัสผ่านไม่ถูกต้อง',
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn bg-zinc-800 text-white px-8 border-none', popup: 'rounded-3xl' },
+                    buttonsStyling: false
+                });
                 document.getElementById('login-page').style.opacity = "1";
             }
         } catch (e) {
             console.error(e);
-            Swal.fire('ข้อผิดพลาด', 'เซิร์ฟเวอร์ไม่ตอบสนอง', 'error');
+            Swal.fire({
+                title: 'ข้อผิดพลาด',
+                text: 'เซิร์ฟเวอร์ไม่ตอบสนอง',
+                icon: 'error',
+                customClass: { confirmButton: 'btn bg-zinc-800 text-white px-8 border-none', popup: 'rounded-3xl' },
+                buttonsStyling: false
+            });
             document.getElementById('login-page').style.opacity = "1";
         }
     } else {
         const confirmPw = document.getElementById('confirm-password-input').value;
-        if(password !== confirmPw) return Swal.fire('แจ้งเตือน', 'รหัสผ่านไม่ตรงกัน', 'warning');
+        if(password !== confirmPw) {
+            return Swal.fire({
+                title: 'แจ้งเตือน',
+                text: 'รหัสผ่านไม่ตรงกัน',
+                icon: 'warning',
+                customClass: { confirmButton: 'btn bg-orange-500 text-white px-8 border-none', popup: 'rounded-3xl' },
+                buttonsStyling: false
+            });
+        }
 
         try {
             const res = await fetch(`${API_BASE_URL}/cook/register`, {
@@ -117,14 +170,32 @@ async function handleAuth() {
             });
             const result = await res.json();
             if(res.status === 200) {
-                Swal.fire('สำเร็จ!', 'ลงทะเบียนตั้งรหัสผ่านเรียบร้อยแล้ว', 'success');
+                Swal.fire({
+                    title: 'สำเร็จ!',
+                    text: 'ลงทะเบียนตั้งรหัสผ่านเรียบร้อยแล้ว',
+                    icon: 'success',
+                    customClass: { confirmButton: 'btn bg-green-500 hover:bg-green-600 text-white px-8 border-none', popup: 'rounded-3xl' },
+                    buttonsStyling: false
+                });
                 toggleAuth('login');
             } else {
-                Swal.fire('ผิดพลาด', result.message || "ลงทะเบียนไม่สำเร็จ", 'error');
+                Swal.fire({
+                    title: 'ผิดพลาด',
+                    text: result.message || "ลงทะเบียนไม่สำเร็จ",
+                    icon: 'error',
+                    customClass: { confirmButton: 'btn bg-zinc-800 text-white px-8 border-none', popup: 'rounded-3xl' },
+                    buttonsStyling: false
+                });
             }
         } catch (e) { 
             console.error(e); 
-            Swal.fire('ข้อผิดพลาด', 'เซิร์ฟเวอร์ไม่ตอบสนอง', 'error');
+            Swal.fire({
+                title: 'ข้อผิดพลาด',
+                text: 'เซิร์ฟเวอร์ไม่ตอบสนอง',
+                icon: 'error',
+                customClass: { confirmButton: 'btn bg-zinc-800 text-white px-8 border-none', popup: 'rounded-3xl' },
+                buttonsStyling: false
+            });
         }
     }
 }
@@ -222,12 +293,24 @@ async function updateOrderStatusDB(orderId, newStatus) {
         if (res.status === 200) {
             fetchActiveOrders(); 
         } else {
-            Swal.fire('ผิดพลาด', 'ไม่สามารถอัปเดตสถานะได้', 'error');
+            Swal.fire({
+                title: 'ผิดพลาด',
+                text: 'ไม่สามารถอัปเดตสถานะได้',
+                icon: 'error',
+                customClass: { confirmButton: 'btn bg-zinc-800 text-white px-8 border-none', popup: 'rounded-3xl' },
+                buttonsStyling: false
+            });
             btn.innerText = oldText;
             btn.disabled = false;
         }
     } catch (e) { 
-        Swal.fire('ข้อผิดพลาด', 'เซิร์ฟเวอร์ไม่ตอบสนอง', 'error');
+        Swal.fire({
+            title: 'ข้อผิดพลาด',
+            text: 'เซิร์ฟเวอร์ไม่ตอบสนอง',
+            icon: 'error',
+            customClass: { confirmButton: 'btn bg-zinc-800 text-white px-8 border-none', popup: 'rounded-3xl' },
+            buttonsStyling: false
+        });
         btn.innerText = oldText;
         btn.disabled = false;
     }
@@ -251,7 +334,6 @@ async function fetchDashboard() {
                 result.top_menus.forEach((item, index) => {
                     let icon = index === 0 ? '👑 ' : '';
                     
-                    // 💡 แก้ไขแถวให้สว่างและใส่เส้นแบ่งสวยๆ
                     let rowClass = index === 0 
                         ? 'font-bold bg-orange-50 border-b border-gray-200 text-zinc-900' 
                         : 'bg-white border-b border-gray-200 text-zinc-800 hover:bg-gray-50';
