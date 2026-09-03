@@ -148,18 +148,21 @@ app.delete('/admin/cook/:id', (req, res) => {
 // 💡 อัปเดต API ดึงเมนูขายดี ให้กรองตามวันที่ (Today, All Time, Custom)
 app.get('/admin/top-menus', (req, res) => {
     const { startDate, endDate, filter } = req.query;
-    
-    // สร้างตัวแปรรองรับเงื่อนไขวันที่
     let whereClause = "";
     let queryParams = [];
 
-    if (filter === 'today') {
-        whereClause = "WHERE DATE(o.order_time) = CURDATE()";
-    } else if (startDate && endDate) {
-        whereClause = "WHERE DATE(o.order_time) BETWEEN ? AND ?";
-        queryParams = [startDate, endDate];
+    if (filter !== 'all' && startDate && endDate) {
+        if (startDate === endDate) {
+            whereClause = "WHERE o.order_time LIKE ?";
+            queryParams = [`${startDate}%`];
+        } else {
+            whereClause = "WHERE DATE(o.order_time) BETWEEN ? AND ?";
+            queryParams = [startDate, endDate];
+        }
     }
 
+    // 💡 แก้ไข: ใช้ LEFT JOIN กับ order_table ตรงๆ โดยไม่ผ่าน customer_session 
+    // เพื่อให้ยอดขายยังอยู่แม้ลูกค้าจะถูกลบเซสชันไปแล้ว
     const sql = `
         SELECT 
             m.name, 
@@ -179,6 +182,7 @@ app.get('/admin/top-menus', (req, res) => {
         res.status(200).json(results);
     });
 });
+
 
 // 5. Add a new menu item
 app.post('/admin/menu', upload.single('imageFile'), (req, res) => {
@@ -338,44 +342,6 @@ app.get('/admin/dashboard', (req, res) => {
     });
 });
 
-// 10. Get Top Menus (เวอร์ชันไม่ง้อ customer_session เพื่อให้ยอดไม่หายหลังลบลูกค้า)
-app.get('/admin/top-menus', (req, res) => {
-    const { startDate, endDate, filter } = req.query;
-    let whereClause = "";
-    let queryParams = [];
-
-    if (filter !== 'all' && startDate && endDate) {
-        if (startDate === endDate) {
-            whereClause = "WHERE o.order_time LIKE ?";
-            queryParams = [`${startDate}%`];
-        } else {
-            whereClause = "WHERE DATE(o.order_time) BETWEEN ? AND ?";
-            queryParams = [startDate, endDate];
-        }
-    }
-
-    // 💡 แก้ไข: ใช้ LEFT JOIN กับ order_table ตรงๆ โดยไม่ผ่าน customer_session 
-    // เพื่อให้ยอดขายยังอยู่แม้ลูกค้าจะถูกลบเซสชันไปแล้ว
-    const sql = `
-        SELECT 
-            m.name, 
-            m.image, 
-            SUM(oi.quantity) as total_sold
-        FROM order_item oi
-        JOIN order_table o ON oi.order_id = o.order_id
-        JOIN menu_item m ON oi.menu_id = m.menu_id
-        ${whereClause}
-        GROUP BY m.menu_id, m.name, m.image
-        ORDER BY total_sold DESC
-        LIMIT 3
-    `;
-
-    con.query(sql, queryParams, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json(results);
-    });
-});
-
 // ==========================================
 // Customer Session & Order Management
 // ==========================================
@@ -516,22 +482,6 @@ app.put('/admin/order/:id/status', (req, res) => {
     });
 });
 
-// 11.4 Delete Order History Record (💡 เพิ่มใหม่: สำหรับลบประวัติออเดอร์)
-app.delete('/admin/order/:id', (req, res) => {
-    const orderId = req.params.id;
-    
-    // ลบใน order_item ก่อนเพื่อไม่ให้ติด Foreign Key
-    con.query("DELETE FROM order_item WHERE order_id = ?", [orderId], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        
-        // จากนั้นค่อยลบใน order_table
-        con.query("DELETE FROM order_table WHERE order_id = ?", [orderId], (err2) => {
-            if (err2) return res.status(500).json({ error: err2.message });
-            res.status(200).json({ message: "ลบประวัติออเดอร์ออกจากระบบเรียบร้อยแล้ว" });
-        });
-    });
-});
-
 // ==========================================
 // Review Management
 // ==========================================
@@ -651,6 +601,7 @@ app.get('/status', (req, res) => res.sendFile(path.join(__dirname, 'viewe/custom
 app.get('/history', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/history.html')));
 app.get('/customer/payment', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/payment.html')));
 app.get('/customer/review', (req, res) => res.sendFile(path.join(__dirname, 'viewe/customer/review.html')));
+app.get('/cook', (req, res) => {res.sendFile(path.join(__dirname, 'viewe/Cook/Cook.html'));});
 
 // 💡 อัปเดต: ระบบเข้าโต๊ะ (ค้นหาด้วย table_number ให้ตรงกับป้ายโต๊ะจริง)
 app.post('/customer/table', (req, res) => {
@@ -704,32 +655,104 @@ app.get('/customer/menu', (req, res) => {
 
 // 💡 อัปเดต: ระบบบันทึกออเดอร์ (ดึงค่า extra และ extra_price ไปบันทึกด้วย)
 app.post('/customer/order', (req, res) => {
-    const customerId = req.body.customer_id || req.body.session_id; 
+    const customerId = req.body.customer_id || req.body.session_id;
     const items = req.body.items;
 
-    if (!items || items.length === 0) return res.status(400).json({ error: "ไม่มีอาหารในตะกร้า" });
-    if (!customerId) return res.status(400).json({ error: "ไม่พบข้อมูลโต๊ะ กรุณากลับไปหน้าแรกเพื่อเข้าโต๊ะใหม่ครับ" });
+    if (!customerId) {
+        return res.status(400).json({
+            error: "ไม่พบข้อมูลโต๊ะ กรุณากลับไปหน้าแรก"
+        });
+    }
 
-    const sqlOrder = "INSERT INTO order_table (customer_id, status) VALUES (?, 'pending')";
-    con.query(sqlOrder, [customerId], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message }); 
-        
-        const orderId = result.insertId; 
-        
-        const itemValues = items.map(item => [
-            orderId, 
-            item.menu_id || item.id, 
-            item.qty || item.quantity || 1, 
-            item.detail || '-', 
-            item.extra || '',           // <-- บันทึกข้อความสั่งพิเศษ (ถ้ามี)
-            item.extra_price || 0,      // <-- บันทึกราคาพิเศษที่บวกเพิ่ม (ถ้ามี)
-            customerId 
-        ]);
-        
-        const sqlItems = "INSERT INTO order_item (order_id, menu_id, quantity, detail, extra, extra_price, customer_id) VALUES ?";
-        con.query(sqlItems, [itemValues], (err2) => {
-            if (err2) return res.status(500).json({ error: err2.message });
-            res.status(200).json({ order_id: orderId, status: "pending" });
+    if (!items || items.length === 0) {
+        return res.status(400).json({
+            error: "ไม่มีอาหารในตะกร้า"
+        });
+    }
+
+    // ตรวจสอบ Session ก่อนสร้าง Order
+    const checkSessionSql = `
+        SELECT status
+        FROM customer_session
+        WHERE customer_id = ?
+        LIMIT 1
+    `;
+
+    con.query(checkSessionSql, [customerId], (sessionErr, sessionRows) => {
+
+        if (sessionErr) {
+            return res.status(500).json({
+                error: sessionErr.message
+            });
+        }
+
+        if (sessionRows.length === 0) {
+            return res.status(404).json({
+                error: "ไม่พบ Session ของลูกค้า"
+            });
+        }
+
+        // หลังชำระเงินแล้ว / ปิด Session → ห้ามสั่ง
+        if (sessionRows[0].status !== 'active') {
+            return res.status(403).json({
+                error: "โต๊ะนี้ปิดการสั่งอาหารแล้ว กรุณาเปิด Session ใหม่"
+            });
+        }
+
+        // Session ยัง active → สร้าง Order
+        const sqlOrder = `
+            INSERT INTO order_table (customer_id, status)
+            VALUES (?, 'pending')
+        `;
+
+        con.query(sqlOrder, [customerId], (err, result) => {
+
+            if (err) {
+                return res.status(500).json({
+                    error: err.message
+                });
+            }
+
+            const orderId = result.insertId;
+
+            const itemValues = items.map(item => [
+                orderId,
+                item.menu_id || item.id,
+                item.qty || item.quantity || 1,
+                item.detail || '-',
+                item.extra || '',
+                item.extra_price || 0,
+                customerId
+            ]);
+
+            const sqlItems = `
+                INSERT INTO order_item
+                (
+                    order_id,
+                    menu_id,
+                    quantity,
+                    detail,
+                    extra,
+                    extra_price,
+                    customer_id
+                )
+                VALUES ?
+            `;
+
+            con.query(sqlItems, [itemValues], (err2) => {
+
+                if (err2) {
+                    return res.status(500).json({
+                        error: err2.message
+                    });
+                }
+
+                res.status(201).json({
+                    success: true,
+                    order_id: orderId,
+                    status: "pending"
+                });
+            });
         });
     });
 });
@@ -747,30 +770,133 @@ app.get('/customer/status/:customerId', (req, res) => {
 });
 
 app.post('/customer/payment', (req, res) => {
-    const { order_id, amount, customer_id } = req.body;
-    if (!order_id || !customer_id) return res.status(400).json({ error: "Missing order_id or customer_id" });
+    const { order_id, amount, customer_id, method } = req.body;
 
-    const sqlPayment = "INSERT INTO payment (order_id, amount, payment_date) VALUES (?, ?, NOW())";
-    con.query(sqlPayment, [order_id, amount], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        
-        const sqlUpdateStatus = "UPDATE customer_session SET status = 'closed' WHERE customer_id = ?";
-        con.query(sqlUpdateStatus, [customer_id], (errUpdate) => {
-            if (errUpdate) return res.status(500).json({ error: errUpdate.message });
-            
-            const sqlGetTable = "SELECT table_id FROM customer_session WHERE customer_id = ?";
-            con.query(sqlGetTable, [customer_id], (errTable, tableRes) => {
-                if (!errTable && tableRes.length > 0) {
-                    const tableId = tableRes[0].table_id;
-                    const sqlFreeTable = "UPDATE restaurant_table SET status = 'available' WHERE table_id = ?";
-                    con.query(sqlFreeTable, [tableId], () => {
-                        res.status(200).json({ message: 'Payment Recorded and Table Freed', payment_id: result.insertId });
-                    });
-                } else {
-                    res.status(200).json({ message: 'Payment Recorded', payment_id: result.insertId });
-                }
-            });
+    if (!order_id || !customer_id || amount === undefined) {
+        return res.status(400).json({
+            error: "Missing order_id, customer_id or amount"
         });
+    }
+
+    // 1. หาโต๊ะของลูกค้าก่อน
+    const getSessionSql = `
+        SELECT customer_id, table_id, status
+        FROM customer_session
+        WHERE customer_id = ?
+    `;
+
+    con.query(getSessionSql, [customer_id], (err, sessionRows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+
+        if (sessionRows.length === 0) {
+            return res.status(404).json({
+                error: "ไม่พบ Customer Session"
+            });
+        }
+
+        const session = sessionRows[0];
+
+        // ป้องกันการจ่ายซ้ำหลัง Session ปิดแล้ว
+        if (session.status === 'closed') {
+            return res.status(400).json({
+                error: "Session นี้ถูกปิดไปแล้ว"
+            });
+        }
+
+        const tableId = session.table_id;
+
+        // 2. บันทึก Payment
+        const paymentSql = `
+            INSERT INTO payment
+            (order_id, amount, method, payment_date)
+            VALUES (?, ?, ?, NOW())
+        `;
+
+        con.query(
+            paymentSql,
+            [order_id, amount, method || 'Cash'],
+            (errPayment, paymentResult) => {
+
+                if (errPayment) {
+                    return res.status(500).json({
+                        error: errPayment.message
+                    });
+                }
+
+                // 3. เปลี่ยน Order ที่ยัง served ของ Customer นี้เป็น paid
+                const updateOrdersSql = `
+                    UPDATE order_table
+                    SET status = 'paid'
+                    WHERE customer_id = ?
+                    AND status = 'served'
+                `;
+
+                con.query(
+                    updateOrdersSql,
+                    [customer_id],
+                    (errOrders, orderResult) => {
+
+                        if (errOrders) {
+                            return res.status(500).json({
+                                error: errOrders.message
+                            });
+                        }
+
+                        // 4. ปิด Customer Session
+                        const closeSessionSql = `
+                            UPDATE customer_session
+                            SET status = 'closed'
+                            WHERE customer_id = ?
+                        `;
+
+                        con.query(
+                            closeSessionSql,
+                            [customer_id],
+                            (errSession) => {
+
+                                if (errSession) {
+                                    return res.status(500).json({
+                                        error: errSession.message
+                                    });
+                                }
+
+                                // 5. คืนโต๊ะให้เป็น available
+                                const freeTableSql = `
+                                    UPDATE restaurant_table
+                                    SET status = 'available'
+                                    WHERE table_id = ?
+                                `;
+
+                                con.query(
+                                    freeTableSql,
+                                    [tableId],
+                                    (errTable) => {
+
+                                        if (errTable) {
+                                            return res.status(500).json({
+                                                error: errTable.message
+                                            });
+                                        }
+
+                                        // 6. สำเร็จครบทุกขั้นตอน
+                                        res.status(200).json({
+                                            message: "Payment completed successfully",
+                                            payment_id: paymentResult.insertId,
+                                            paid_order_id: order_id,
+                                            paid_orders: orderResult.affectedRows,
+                                            customer_id: customer_id,
+                                            table_id: tableId
+                                        });
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
+            }
+        );
     });
 });
 
@@ -836,13 +962,19 @@ app.get('/customer/history/:customerId', (req, res) => {
         });
 
         // 💡 2. ตัดสินใจว่าจะใช้ยอดไหนส่งไปให้หน้าเว็บ
-        const finalResults = Object.values(ordersMap).map(order => {
-            // ถ้าแอดมินแก้ตัวเลข (custom_total ไม่ใช่ null) ให้ใช้ยอดนั้น ถ้าไม่ได้แก้ให้ใช้ยอดคำนวณปกติ
-            order.total_price = order.custom_total !== null ? order.custom_total : order.calculated_total;
-            return order;
-        });
+            const finalResults = Object.values(ordersMap).map(order => {
+                order.total_price = order.custom_total !== null
+                    ? order.custom_total
+                    : order.calculated_total;
 
-       // 💡 API ตรวจสอบสถานะเซสชันลูกค้า (เช็คการปิดโต๊ะ + ดึงเบอร์โต๊ะล่าสุดแบบ Real-time)
+                 return order;
+            });
+
+        res.json(finalResults);
+    });
+});
+
+// 💡 API ตรวจสอบสถานะเซสชันลูกค้า
 app.get('/customer/check-session/:id', (req, res) => {
     const sql = `
         SELECT cs.status, rt.table_number 
@@ -850,23 +982,20 @@ app.get('/customer/check-session/:id', (req, res) => {
         LEFT JOIN restaurant_table rt ON cs.table_id = rt.table_id 
         WHERE cs.customer_id = ?
     `;
+
     con.query(sql, [req.params.id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        
-        // ถ้าไม่พบลูกค้าในระบบ หรือสถานะเป็น closed ให้ส่งบอกหน้าเว็บ
-        if (results.length === 0) return res.json({ status: 'not_found' });
-        
-        res.json({ 
+
+        if (results.length === 0) {
+            return res.json({ status: 'not_found' });
+        }
+
+        res.json({
             status: results[0].status,
-            table_number: results[0].table_number // 💡 ส่งเบอร์โต๊ะล่าสุดกลับไปด้วย
+            table_number: results[0].table_number
         });
     });
 });
-
-        res.json(finalResults);
-    });
-});
-
 // #####################################################################################
 // 👨‍🍳 (COOK) - ระบบห้องครัว
 // #####################################################################################
