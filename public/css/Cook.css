@@ -1,0 +1,55 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  color: #1f2937;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#main-nav { min-height: 72px; }
+#main-nav .nav-links a { text-decoration: none; }
+
+#login-page { min-height: calc(100vh - 72px); }
+#login-page > div:first-child {
+  color: #fff;
+  letter-spacing: -.03em;
+}
+#login-page .bg-white\/10 {
+  background: rgba(255,255,255,.96) !important;
+  border: 1px solid rgba(255,255,255,.8) !important;
+  box-shadow: 0 20px 50px rgba(56,44,33,.22) !important;
+}
+#login-page #btn-login,
+#login-page #btn-signup { color: #6b7280; }
+#login-page #btn-login { color: #d97706; border-color: #f39c12; }
+#login-page input {
+  color: #1f2937 !important;
+  border-color: #e5e7eb !important;
+}
+#login-page input::placeholder { color: #9ca3af !important; }
+
+.page h2 { letter-spacing: -.02em; }
+#orders-container .order-card,
+.order-card {
+  background: rgba(255,255,255,.97) !important;
+  color: #1f2937 !important;
+  border: 1px solid #f1e5d5;
+  border-radius: 20px !important;
+  box-shadow: 0 14px 35px rgba(56,44,33,.14) !important;
+}
+#orders-container .order-card.yellow,
+#orders-container .order-card.blue { background: rgba(255,255,255,.97) !important; }
+
+#dashboard .bg-zinc-900,
+#reviews .bg-zinc-900 { background: #382c21 !important; }
+#dashboard .bg-white\/95,
+#reviews .bg-white\/95 { background: rgba(255,255,255,.97) !important; }
+#dashboard .bg-orange-100 { background: #fff1d6 !important; }
+
+@media (max-width: 720px) {
+  #main-nav { padding-left: 16px !important; padding-right: 16px !important; }
+  #main-nav > div:first-child { font-size: 1rem !important; }
+  #main-nav .nav-links { gap: 12px !important; }
+  #main-nav .nav-links a { font-size: .78rem; }
+  #main-nav .btn { padding-left: 14px !important; padding-right: 14px !important; }
+  .page { padding: 20px !important; }
+}

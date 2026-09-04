@@ -1,0 +1,206 @@
+:root {
+  --restaurant-orange: #f39c12;
+  --restaurant-orange-dark: #d48806;
+  --restaurant-brown: #382c21;
+  --restaurant-cream: #fff8eb;
+  --restaurant-text: #262626;
+  --restaurant-muted: #737373;
+  --restaurant-card: rgba(255,255,255,.96);
+  --restaurant-shadow: 0 18px 45px rgba(0,0,0,.16);
+  --restaurant-radius: 20px;
+}
+
+* { box-sizing: border-box; }
+
+body.restaurant-page {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--restaurant-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: #f5f5f5;
+}
+
+body.restaurant-page ::selection {
+  background: rgba(243,156,18,.25);
+}
+
+.restaurant-page button,
+.restaurant-page input,
+.restaurant-page select,
+.restaurant-page textarea {
+  font: inherit;
+}
+
+.restaurant-page button {
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease, color .16s ease;
+}
+
+.restaurant-page button:active { transform: scale(.98); }
+
+.restaurant-page input:focus,
+.restaurant-page select:focus,
+.restaurant-page textarea:focus {
+  outline: none;
+  border-color: var(--restaurant-orange) !important;
+  box-shadow: 0 0 0 3px rgba(243,156,18,.14);
+}
+
+/* Shared restaurant surfaces */
+.restaurant-surface {
+  background: var(--restaurant-card);
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: var(--restaurant-radius);
+  box-shadow: var(--restaurant-shadow);
+  backdrop-filter: blur(10px);
+}
+
+.restaurant-topbar {
+  background: rgba(255,255,255,.97);
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+}
+
+.restaurant-brand {
+  color: var(--restaurant-orange-dark);
+  font-weight: 900;
+  letter-spacing: -.02em;
+}
+
+.restaurant-primary {
+  background: var(--restaurant-orange) !important;
+  border-color: var(--restaurant-orange) !important;
+  color: #fff !important;
+}
+
+.restaurant-primary:hover {
+  background: var(--restaurant-orange-dark) !important;
+  border-color: var(--restaurant-orange-dark) !important;
+  box-shadow: 0 8px 20px rgba(243,156,18,.25);
+}
+
+.restaurant-back {
+  color: #525252 !important;
+  background: #f5f5f5 !important;
+  border-color: transparent !important;
+}
+
+.restaurant-back:hover {
+  background: var(--restaurant-cream) !important;
+  color: var(--restaurant-orange-dark) !important;
+}
+
+.restaurant-status {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .35rem .75rem;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.restaurant-status::before {
+  content: "";
+  width: .5rem;
+  height: .5rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.restaurant-status.pending { color: #ca8a04; background: #fef9c3; }
+.restaurant-status.cooking { color: #4f46e5; background: #eef2ff; }
+.restaurant-status.serving { color: #16a34a; background: #dcfce7; }
+.restaurant-status.paid { color: #15803d; background: #dcfce7; }
+.restaurant-status.closed { color: #737373; background: #f5f5f5; }
+
+.restaurant-page .table thead th {
+  color: #525252;
+  font-weight: 800;
+}
+
+.restaurant-page .table tbody tr {
+  border-color: #f1f1f1;
+}
+
+.restaurant-page .table tbody tr:hover {
+  background: #fffaf2;
+}
+
+/* Consistent responsive container */
+.restaurant-container {
+  width: min(1180px, calc(100% - 32px));
+  margin-inline: auto;
+}
+
+@media (max-width: 640px) {
+  .restaurant-container { width: min(100% - 20px, 1180px); }
+}
+
+/* Shared bottom navigation used by customer pages */
+.restaurant-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 24px));
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 8px;
+  background: rgba(255,255,255,.96);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 22px;
+  box-shadow: 0 15px 40px rgba(0,0,0,.18);
+  backdrop-filter: blur(14px);
+  z-index: 60;
+}
+
+.restaurant-bottom-nav a,
+.restaurant-bottom-nav button {
+  min-height: 52px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.restaurant-bottom-nav .active {
+  color: var(--restaurant-orange-dark);
+  background: var(--restaurant-cream);
+}
+
+/* Cook: keep the existing functionality but bring its visual language into the restaurant system. */
+#main-nav.restaurant-cook-nav {
+  background: rgba(255,255,255,.97) !important;
+  color: #262626 !important;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+}
+
+#main-nav.restaurant-cook-nav .nav-links a {
+  color: #737373;
+}
+
+#main-nav.restaurant-cook-nav .nav-links a.active,
+#main-nav.restaurant-cook-nav .nav-links a:hover {
+  color: var(--restaurant-orange-dark);
+  border-color: var(--restaurant-orange) !important;
+}
+
+@media (max-width: 700px) {
+  #main-nav.restaurant-cook-nav {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  #main-nav.restaurant-cook-nav .nav-links {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+}
